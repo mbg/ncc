@@ -1,0 +1,44 @@
+module HelloWorld
+{    
+    state Stack a : IO
+    {
+        stackVals :: [a];
+        stackSize :: Int;
+    }
+    
+    push :: a -> Stack a ();
+    push x = {
+        xs     <: stackVals;
+        (x:xs) >: stackVals;
+    };
+    
+    pop :: Stack a a;
+    pop = {
+        (x:xs) <: stackVals;
+        xs     >: stackVals;
+        return x;
+    };
+    
+    test :: Stack String ();
+    test = {
+        push "World";
+        push "Hello";
+        x <- pop;
+        lift (putStrLn x);
+        y <- pop;
+        lift (putStrLn y);
+    };
+    
+    main :: IO ();
+    main = evalStateT test (Stack [] 0);
+    
+    --msg :: IO String;
+    --msg = returnIO "Goodbye World!";
+    
+    {-main :: IO ();
+    main = runStateT {
+        putStrLn "Hello World!";
+        xs <- msg;
+        putStrLn xs;
+    } Empty;-} 
+}

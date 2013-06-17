@@ -1,0 +1,43 @@
+module Cada.Monad.WriterT
+{
+    import NCC.Internal;
+
+    import Cada;
+    import Cada.Class.Monoid;
+    import Cada.Class.Monad;
+    import Cada.Class.MonadTrans;
+    import Cada.Monad.Identity;
+    import Cada.Pair;
+    
+    newtype WriterT w m a = WriterT { runWriterT :: m (a,w) }
+    
+    instance (Monoid w, Monad m) => Monad (WriterT w m)
+    {
+        return :: a -> WriterT w m a;
+        return x = WriterT (return (x,mempty));
+        
+        (>>=) :: WriterT w m a -> (a -> WriterT w m b) -> WriterT w m b;
+        m >>= f = WriterT {
+            (x, w)  <- runWriterT m;
+            (b, w') <- runWriterT (f x);
+            return (b, w `mappend` w');
+        };
+    }
+    
+    tell :: (Monoid w, Monad m) => w -> WriterT w m ();
+    tell w = WriterT (return ((), w));
+    
+    type Writer w = WriterT w Identity;
+        
+    execWriterT :: Monad m => WriterT w m a -> m w;
+    execWriterT m = {
+        (x,w) <- runWriterT m;
+        return w;
+    };
+    
+    runWriter :: Writer w a -> (a,w);
+    runWriter = runIdentity . runWriterT;
+    
+    execWriter :: Writer w a -> w;
+    execWriter = snd . runWriter;
+}

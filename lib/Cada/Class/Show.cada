@@ -1,0 +1,20 @@
+module Cada.Class.Show
+{
+    import NCC.Internal;
+    import Cada;
+    
+    class Show a
+    {
+        show :: a -> String;
+    }
+    
+    instance Show Int
+    {
+        show = intShow;
+    }
+    
+    instance Show Char
+    {
+        show = charShow;
+    }
+}

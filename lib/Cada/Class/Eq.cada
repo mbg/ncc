@@ -1,0 +1,34 @@
+module Cada.Class.Eq
+{
+    import NCC.Internal;
+    
+    import Cada.Bool;
+    
+    class Eq a
+    {
+        (==), (/=) :: a -> a -> Bool;
+    }
+    
+    instance Eq Bool
+    {
+        (==) :: Bool -> Bool -> Bool;
+        True  == y     = y;
+        False == False = True;
+        _     == _     = False;
+        
+        (/=) :: Bool -> Bool -> Bool;
+        x /= y = not (x == y);
+    }
+    
+    instance Eq Int
+    {
+        (==) = intEq;
+        (/=) = intIneq;
+    }
+    
+    instance Eq Char
+    {
+        (==) = charEq;
+        (/=) = charIneq;
+    }
+}

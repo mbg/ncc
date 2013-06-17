@@ -1,0 +1,17 @@
+module Cada.IO
+{
+    import NCC.Internal;
+    
+    import Cada;
+    import Cada.Class.Monad;
+    import Cada.Class.Show;
+    
+    instance Monad IO
+    {
+        return = returnIO;
+        (>>=)  = bindIO;
+    }
+    
+    print :: Show a => a -> IO ();
+    print = putStrLn . show;
+}

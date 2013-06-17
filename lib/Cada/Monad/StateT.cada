@@ -1,0 +1,74 @@
+module Cada.Monad.StateT
+{
+    import NCC.Internal;
+
+    import Cada.Class.Monad;
+    import Cada.Class.MonadTrans;
+    import Cada.Monad.Identity;
+    import Cada.Pair;
+    
+    newtype StateT s m a = ST { runStateT :: s -> m (a,s) } 
+
+    instance Monad m => Monad (StateT s m)
+    {
+        return :: a -> StateT s m a;
+        return x = ST (\s -> return (x,s));
+        
+        (>>=) :: StateT s m a -> (a -> StateT s m b) -> StateT s m b;
+        (ST m) >>= f = ST (\s -> {
+            (x,s') <- m s;
+            let (ST m') = f x in m' s';
+        });
+    }
+    
+    instance MonadTrans (StateT s)
+    {
+        lift :: Monad m => m a -> StateT s m a;
+        lift m = ST (\s -> {
+            x <- m;
+            return (x,s);
+        });
+    }
+    
+    type State s = StateT s Identity;
+    
+    get :: Monad m => StateT s m s;
+    get = ST (\s -> return (s,s));
+    
+    gets :: Monad m => (s -> a) -> StateT s m a;
+    gets p = ST (\s -> return (p s, s));
+    
+    modify :: Monad m => (s -> s) -> StateT s m ();
+    modify f = get >>= \v -> put (f v);
+        
+    put :: Monad m => s -> StateT s m ();
+    put s = ST (\_ -> return ((),s));
+    
+    query :: Monad m => (s -> s) -> StateT s m s; 
+    query f = {
+        v <- get;
+        put (f v);
+        return v;
+    };
+        
+    evalStateT :: Monad m => StateT s m a -> s -> m a;
+    evalStateT m i = {
+        (r,s) <- runStateT m i;
+        return r;
+    };
+    
+    execStateT :: Monad m => StateT s m a -> s -> m s;
+    execStateT m i = {
+        (r,s) <- runStateT m i;
+        return s;
+    };
+    
+    runState :: State s a -> s -> (a,s);
+    runState m s = runIdentity (runStateT m s);
+    
+    evalState :: State s a -> s -> a;
+    evalState m s = fst (runState m s);
+    
+    execState :: State s a -> s -> s;
+    execState m s = snd (runState m s);
+}

@@ -1,0 +1,27 @@
+module Cada.Maybe
+{
+    import Cada.Class.Monad;
+    
+    data Maybe a
+    {
+        Nothing,
+        Just
+        {
+            fromJust :: a; 
+        }
+    }
+    
+    instance Monad Maybe
+    {
+        return :: a -> Maybe a;
+        return = Just;
+        
+        (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b;
+        Nothing  >>= _ = Nothing;
+        (Just x) >>= f = f x;
+    }
+    
+    fromMaybe :: a -> Maybe a -> a;
+    fromMaybe x Nothing  = x;
+    fromMaybe _ (Just x) = x;
+}

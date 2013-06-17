@@ -1,0 +1,22 @@
+module Cada.Class.Num
+{
+    import NCC.Internal;
+    
+    import Cada.Class.Eq;
+    
+    class Eq a => Num a
+    {
+        (+), (-), (*) :: a -> a -> a;
+        negate        :: a -> a;
+        abs           :: a -> a;
+    }
+    
+    instance Num Int
+    {
+        (+)    = intAdd;
+        (-)    = intSub;
+        (*)    = intMul;
+        negate = intNegate;
+        abs    = intAbs;
+    }
+}

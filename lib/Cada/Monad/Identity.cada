@@ -1,0 +1,15 @@
+module Cada.Monad.Identity
+{
+    import Cada.Class.Monad;
+    
+    newtype Identity a = Identity { runIdentity :: a }
+    
+    instance Monad Identity
+    {
+        return :: a -> Identity a;
+        return = Identity;
+        
+        (>>=) :: Identity a -> (a -> Identity b) -> Identity b;
+        (Identity x) >>= f = f x;
+    }
+}

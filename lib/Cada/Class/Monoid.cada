@@ -1,0 +1,13 @@
+module Cada.Class.Monoid
+{
+    import NCC.Internal;
+    
+    import Cada;
+    
+    class Monoid a
+    {
+        mempty  :: a;
+        mappend :: a -> a -> a;
+        mconcat :: [a] -> a;
+    }
+}

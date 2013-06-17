@@ -1,0 +1,130 @@
+module Cada.List
+{
+    import NCC.Internal;
+    
+    import Cada;
+    import Cada.Class.Eq;
+    import Cada.Class.Num;
+    import Cada.Class.Show;
+    import Cada.Class.Monoid;
+    import Cada.Class.Monad;
+    import Cada.Class.Collection;
+    import Cada.Bool;
+    import Cada.Maybe;
+    
+    instance Eq a => Eq [a]
+    {
+        (==) xs = and . zipWith (==) xs;
+        (/=) xs = or  . zipWith (/=) xs;
+    }
+    
+    instance Show a => Show [a]
+    {
+        show xs = "[" ++ concat (intersperse "," (map show xs)) ++ "]";
+    }
+    
+    instance Monoid [a]
+    {
+        mempty :: [a];
+        mempty  = [];
+        
+        mappend :: [a] -> [a] -> [a];
+        mappend = (++);
+        
+        mconcat :: [[a]] -> [a];
+        mconcat = concat;
+    }
+    
+    instance Collection []
+    {
+        head :: [a] -> a;
+        head (x:_) = x;
+        
+        tail :: [a] -> [a];
+        tail (_:xs) = xs;
+        
+        init :: [a] -> [a];
+        init [x]    = [];
+        init (x:xs) = x : init xs;
+        
+        last :: [a] -> a;
+        last [x]    = x;
+        last (_:xs) = last xs;
+    }
+    
+    instance Monad []
+    {
+        return :: a -> [a];
+        return x = [x];
+        
+        (>>=) :: [a] -> (a -> [b]) -> [b];
+        xs >>= f = foldr ((++) . f) [] xs;
+    }
+    
+    foldr :: (a -> b -> b) -> b -> [a] -> b;
+    foldr _ z []     = z;
+    foldr f z (x:xs) = f x (foldr f z xs); 
+    
+    foldl :: (a -> b -> a) -> a -> [b] -> a;
+    foldl _ z []     = z;
+    foldl f z (x:xs) = f (foldl f z xs) x;
+       
+    (++) :: [a] -> [a] -> [a];
+    []     ++ ys = ys;
+    (x:xs) ++ ys = x : (xs ++ ys);
+    
+    concat :: [[a]] -> [a];
+    concat []       = [];
+    concat (xs:xss) = xs ++ concat xss;
+    
+    map :: (a -> b) -> [a] -> [b];
+    map _ []     = [];
+    map f (x:xs) = f x : map f xs;
+    
+    zip :: [a] -> [b] -> [(a,b)];
+    zip (x:xs) (y:ys) = (x,y) : zip xs ys;
+    zip _      _      = [];
+    
+    zipWith :: (a -> b -> c) -> [a] -> [b] -> [c];
+    zipWith f (x:xs) (y:ys) = f x y : zipWith f xs ys;
+    zipWith f _      _      = [];
+    
+    all :: (a -> Bool) -> [a] -> Bool;
+    all p []     = True;
+    all p (x:xs) = p x && all p xs;
+    
+    any :: (a -> Bool) -> [a] -> Bool;
+    any p []     = False;
+    any p (x:xs) = p x || any p xs;
+    
+    and :: [Bool] -> Bool;
+    and = foldr (&&) True;
+
+    or :: [Bool] -> Bool;
+    or = foldr (||) False;
+    
+    lookup :: Eq a => a -> [(a,b)] -> Maybe b;
+    lookup k []         = Nothing;
+    lookup k ((i,v):xs) = if i == k then Just v
+                          else lookup k xs;
+                          
+    dropWhile :: (a -> Bool) -> [a] -> [a];
+    dropWhile p []     = [];
+    dropWhile p (x:xs) = if p x then dropWhile p xs 
+                         else x : xs; 
+                         
+    intersperse :: a -> [a] -> [a];
+    intersperse _ []     = [];
+    intersperse _ [y]    = [y];
+    intersperse x (y:ys) = y : (x : intersperse x ys);
+    
+    take :: Int -> [a] -> [a];
+    take _ []     = [];
+    take 0 _      = [];
+    take n (x:xs) = x : take (n-1) xs;
+    
+    takeWhile :: (a -> Bool) -> [a] -> [a];
+    takeWhile _ []     = [];
+    takeWhile p (x:xs) = if p x then x : takeWhile p xs
+                         else [];
+}

@@ -1,0 +1,30 @@
+module Cada.Bool
+{
+    import NCC.Internal;
+    
+    {- 
+        We could represent Bool as
+        
+        enum Bool
+        {
+            True,
+            False
+        }
+        
+        but this would lead to some clashes between our Bool type and
+        GHC.Types.Bool in e.g. pattern matching. There we choose to
+        import Bool from NCC.Internal.
+    -}
+    
+    (&&) :: Bool -> Bool -> Bool;
+    False && _ = False;
+    True  && b = b;
+
+    (||) :: Bool -> Bool -> Bool;
+    True  || _ = True;
+    False || b = b;
+    
+    not :: Bool -> Bool;
+    not False = True;
+    not _     = False;
+}

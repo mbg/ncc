@@ -1,0 +1,4 @@
+module Recursive1
+{
+    import Recursive2;
+}

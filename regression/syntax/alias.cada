@@ -1,0 +1,34 @@
+module Alias
+{
+    import Cada;
+    import NCC.Internal;
+    
+    -- need to sort type aliases before resolving them
+    type Alpha = [Beta];
+    type Beta = String;
+    
+    
+    test :: Alpha;
+    test = ["Hello", "World"];
+    
+    -- check my type :)
+    boo = mapM putStrLn test;
+    
+    foo = head (head test);
+
+    -- can't have a cycle in these
+    {-type A = B;
+    type B = C;
+    type C = A;-}
+    
+    -- superclasses can't be cyclic
+    class {- (Two a) => -} One a
+    {
+       onefun :: a;
+    }
+    
+    class (One a) => Two a
+    {
+        twofun :: a;
+    }
+}

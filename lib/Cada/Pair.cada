@@ -1,0 +1,19 @@
+module Cada.Pair
+{
+    import NCC.Internal;
+    
+    import Cada;
+    import Cada.Class.Show;
+    import Cada.List;
+    
+    instance (Show a, Show b) => Show (a,b)
+    {
+        show (x,y) = "(" ++ show x ++ "," ++ show y ++ ")";
+    }
+    
+    fst :: (a,b) -> a;
+    fst (x,_) = x;
+    
+    snd :: (a,b) -> b;
+    snd (_,y) = y;
+}

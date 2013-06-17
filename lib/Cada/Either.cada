@@ -1,0 +1,8 @@
+module Cada.Either
+{
+    data Either a b
+    {
+        Left  { fromLeft  :: a; }
+        Right { fromRight :: b; }
+    }
+}

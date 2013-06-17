@@ -1,0 +1,10 @@
+module Cada.Class.Functor
+{
+    class Functor f
+    {
+        fmap :: (a -> b) -> f a -> f b;
+    }
+    
+    (<$>) :: Functor f => (a -> b) -> f a -> f b;
+    (<$>) = fmap;
+}

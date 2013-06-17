@@ -1,0 +1,105 @@
+module Hutton
+{
+    import Cada;
+    import NCC.Internal;
+    
+    data Expr
+    {
+        Val { val :: Int; }
+        Add { addLeft :: Expr; addRight :: Expr; }
+        Div { divLeft :: Expr; divRight :: Expr; }
+    }
+    
+    instance Show Expr
+    {
+        show (Val n)   = show n;
+        show (Add l r) = "(" ++ show l ++ " + " ++ show r ++ ")";
+        show (Div l r) = "(" ++ show l ++ " / " ++ show r ++ ")";
+    }
+    
+    div x y = y; -- Division 2.0
+    
+    eval :: Expr -> Int;
+    eval (Val x)   = x;
+    eval (Add l r) = eval l + eval r;
+    
+    safediv :: Int -> Int -> Maybe Int;
+    safediv _ 0 = Nothing;
+    safediv x y = Just (x `div` y);
+    
+    eval' :: Expr -> Maybe Int;
+    eval' (Val x)   = return x;
+    eval' (Add l r) = eval' l >>= \x ->
+                      eval' r >>= \y ->
+                      return (x+y);
+    eval' (Div l r) = eval' l >>= \x ->
+                      eval' r >>= \y ->
+                      x `safediv` y;
+                      
+    eval'' :: Expr -> Maybe Int;
+    eval'' (Val x)   = return x;
+    eval'' (Add l r) = {
+        x <- eval'' l;
+        y <- eval'' r;
+        return (x+y);
+    };
+    eval'' (Div l r) = {
+        x <- eval'' l;
+        y <- eval'' r;
+        x `safediv` y;
+    };
+    
+    data Instr
+    {
+        ADD,
+        PUSH { pushVal :: Int; }
+    }
+    
+    instance Show Instr
+    {
+        show ADD      = "ADD";
+        show (PUSH n) = "PUSH " ++ show n;
+    }
+    
+    type Program = [Instr];
+    
+    comp :: Expr -> Program;
+    comp (Val x)   = [PUSH x];
+    comp (Add l r) = comp r ++ comp l ++ [ADD];
+    
+    type Label = State Int;
+    
+    fresh :: Label Int;
+    fresh = {
+        c <- get;
+        put (c+1);
+        return c;
+    };
+    
+    label :: Expr -> Label Expr;
+    label (Val x) = {
+        y <- fresh;
+        return (Val y);
+    };
+    label (Add l r) = {
+        l' <- label l;
+        r' <- label r;
+        return (Add l' r');
+    };
+    
+    test :: Expr;
+    test = Add (Val 4) (Add (Val 2) (Val 4));
+    
+    main :: IO ();
+    main = {
+        print test;
+        print (eval test);
+        
+        case eval'' test of {
+            Nothing  -> putStrLn "Division by zero!";
+            (Just x) -> print x;
+        };
+        
+        print (comp test);
+    };
+}

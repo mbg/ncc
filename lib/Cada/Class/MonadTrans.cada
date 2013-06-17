@@ -1,0 +1,9 @@
+module Cada.Class.MonadTrans
+{
+    import Cada.Class.Monad;
+    
+    class MonadTrans t
+    {
+        lift :: Monad m => m a -> t m a;
+    }
+}

@@ -1,0 +1,32 @@
+-- regression test for data types
+module Data
+{
+    -- an 'enum' consists of > 1 constructors, all of which have no parameters 
+    enum Colours
+    {
+        Red,
+        Green,
+        Blue
+    }
+    
+    -- a single constructor data type 
+    data Person
+    {
+        name :: String;
+        age  :: Int;
+    }
+    
+    -- a full data type definition with multiple constructors 
+    data BinaryTree a
+    {
+        Leaf
+        {
+            value :: a;
+        }
+        Node
+        {
+            left  :: BinaryTree a;
+            right :: BinaryTree a;
+        }
+    }
+}

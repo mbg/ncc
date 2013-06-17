@@ -1,0 +1,21 @@
+module Cada.Class.Ord
+{
+    import NCC.Internal;
+    
+    import Cada.Class.Eq;
+
+    enum Ordering
+    {
+        LT,
+        EQ,
+        GT
+    }
+    
+    class Eq a => Ord a
+    {
+        compare              :: a -> a -> Ordering;
+        (<), (<=), (>=), (>) :: a -> a -> Bool;
+        max                  :: a -> a -> a;
+        min                  :: a -> a -> a;
+    }
+}

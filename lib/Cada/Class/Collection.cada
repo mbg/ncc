@@ -1,0 +1,10 @@
+module Cada.Class.Collection
+{
+    class Collection c
+    {
+        head :: c a -> a;
+        tail :: c a -> c a;
+        init :: c a -> c a;
+        last :: c a -> a;
+    }
+}

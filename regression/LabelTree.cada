@@ -1,0 +1,62 @@
+module LabelTree
+{
+    import Cada;
+    import NCC.Internal;
+    
+    data Tree
+    {
+        Leaf { leafValue :: Int; }
+        Node { leftNode :: Tree; rightNode :: Tree; }
+    }
+    
+    indent :: Int -> String;
+    indent 0 = "";
+    indent 1 = "|---";
+    indent n = "|   " ++ indent (n-1);
+    
+    showTree :: Int -> Tree -> String;
+    showTree i (Leaf v)   = 
+        indent i ++ 
+        "Leaf: " ++ 
+        show v   ++ 
+        "\n";
+    showTree i (Node l r) = 
+        indent i         ++ 
+        "Node:\n"        ++ 
+        showTree (i+1) l ++ 
+        showTree (i+1) r;
+    
+    instance Show Tree
+    {
+        show = showTree 0;
+    }
+    
+    state Counter
+    {
+        count :: Int;
+    }
+    
+    fresh :: Counter Int;
+    fresh = {
+        x     <: count;
+        x + 1 >: count;
+        return x;
+    };
+    
+    label :: Tree -> Counter Tree;
+    label (Leaf _)   = {
+        v <- fresh;
+        return (Leaf v);
+    };
+    label (Node l r) = {
+        l' <- label l;
+        r' <- label r;
+        return (Node l' r');
+    };
+    
+    test :: Tree;
+    test = Node (Node (Leaf 7) (Leaf 3)) (Leaf 5);
+    
+    main :: IO ();
+    main = print (evalState (label test) (Counter 0)); 
+}

@@ -1,0 +1,29 @@
+module Let
+{
+    import NCC.Internal;
+    import Cada;
+    
+    boo :: Int;
+    boo = 2;
+    
+    reverse = let
+        go ys []     = ys;
+        go ys (x:xs) = go (x:ys) xs in go [];
+        
+    derp = let
+        (a,b) = head [("Hello", "Goodbye"), ("World", "Universe")] in a;
+    
+    main :: IO ();
+    main = case case boo of {
+            1 -> Nothing;
+            2 -> (Just 3);
+        } of {
+        Nothing  -> putStrLn (reverse "Nothing");
+        (Just x) -> putStrLn (reverse derp);
+    };
+    
+    {-main = let 
+            a = "Hello!";
+            b = 6 in
+        putStrLn a;-}
+}

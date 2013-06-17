@@ -1,0 +1,34 @@
+module Cada.Class.Monad
+{
+    import NCC.Internal;
+    
+    import Cada;
+    
+    class Monad m
+    {
+        return :: a -> m a;
+        (>>=)  :: m a -> (a -> m b) -> m b;
+    }
+    
+    (>>) :: Monad m => m a -> m b -> m b;
+    m >> m' = m >>= \_ -> m';
+    
+    mapM :: Monad m => (a -> m b) -> [a] -> m [b];
+    mapM f []     = return [];
+    mapM f (x:xs) = {
+        y  <- f x;
+        ys <- mapM f xs;
+        return (y : ys);
+    };
+    
+    mapM_ :: Monad m => (a -> m b) -> [a] -> m ();
+    mapM_ f [] = return ();
+    mapM_ f (x:xs) = {
+        f x;
+        mapM_ f xs;
+        return ();
+    };
+    
+    fail :: Monad m => String -> m a;
+    fail = error;
+}

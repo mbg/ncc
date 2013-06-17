@@ -1,0 +1,52 @@
+module Cada
+{
+    import NCC.Internal;
+    
+    
+    
+    {----------------------------------------------------------------------}
+    {-- Basic data types and associated functions                         -}
+    {----------------------------------------------------------------------}
+       
+    otherwise :: Bool;
+    otherwise = True;
+    
+    type String = [Char];
+    
+    {----------------------------------------------------------------------}
+    {-- Basic type classes                                                -}
+    {----------------------------------------------------------------------}
+    
+    class Enum a 
+    {
+        succ           :: a -> a;
+        pred           :: a -> a;
+        toEnum         :: Int -> a;
+        fromEnum       :: a -> Int;
+        enumFrom       :: a -> [a];
+        enumFromThen   :: a -> a -> [a];
+        enumFromTo     :: a -> a -> [a];
+        enumFromThenTo :: a -> a -> a -> [a];
+    }
+    
+    class Bounded a
+    {
+        minBound, maxBound :: a;
+    }
+    
+    {- Misc -}
+    id :: a -> a;
+    id x = x;
+    
+    const :: a -> b -> a;
+    const x _ = x;
+    
+    flip :: (a -> b -> c) -> b -> a -> c;
+    flip f x y = f y x;
+    
+    undefined :: a;
+    undefined = error "Cada.undefined";
+    
+    (.) :: (b -> c) -> (a -> b) -> a -> c;
+    f . g x = f (g x);
+}

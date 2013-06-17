@@ -1,0 +1,274 @@
+module MonadicCompiler
+{
+    import Cada.Class.Monoid;
+    import Cada.Monad.WriterT;
+    
+    {----------------------------------------------------------------------}
+    {-- Abstract Syntax Tree                                              -}
+    {----------------------------------------------------------------------}
+    
+    type Name = String;
+    
+    enum Op
+    {
+        Add,
+        Sub,
+        Mul,
+        Div,
+        Leq,
+        Lt,
+        Gt,
+        Geq
+    }
+    
+    instance Show Op
+    {
+        show Add = "Add";
+        show Sub = "Sub";
+        show Mul = "Mul";
+        show Div = "Div";
+        show Leq = "Leq";
+        show Lt  = "Lt";
+        show Gt  = "Gt";
+        show Geq = "Geq";
+    }
+    
+    data Expr
+    {
+        Val { val :: Int; }
+        Var { name :: Name; }
+        App 
+        { 
+            op :: Op; 
+            opLeft :: Expr; 
+            opRight :: Expr;
+        }
+    }
+    
+    data Prog
+    {
+        Assign
+        {
+            asName :: Name;
+            asExpr :: Expr;
+        }
+        If
+        {
+            ifCond  :: Expr;
+            ifTrue  :: Prog;
+            ifFalse :: Prog;
+        }
+        While
+        {
+            whCond :: Expr;
+            whProg :: Prog;
+        }
+        Seqn { seqn :: [Prog]; }
+    }
+    
+    {----------------------------------------------------------------------}
+    {-- Virtual Machine                                                   -}
+    {----------------------------------------------------------------------}
+    
+    type Stack = [Int];
+    type Mem   = [(Name, Int)];
+    
+    type Label = Int;
+    
+    type Code  = [Inst];
+    
+    data Inst
+    {
+        PUSH  { pushVal :: Int; }
+        PUSHV { pushVar :: Name; }
+        POP   { popVar  :: Name; }
+        DO    { doOp    :: Op; }
+        JUMP  { jmpLbl  :: Label; }
+        JUMPZ { jmpZLbl :: Label; }
+        LABEL { lblName :: Label; }
+    }
+    
+    instance Show Inst
+    {
+        show (PUSH v)  = "PUSH " ++ show v;
+        show (PUSHV n) = "PUSHV " ++ show n;
+        show (POP n)   = "POP " ++ show n;
+        show (DO op)   = "OP " ++ show op;
+        show (JUMP l)  = "JUMP " ++ show l;
+        show (JUMPZ l) = "JUMPZ " ++ show l;
+        show (LABEL l) = "LABEL " ++ show l;
+    }
+    
+    {----------------------------------------------------------------------}
+    {-- Compiler                                                          -}
+    {----------------------------------------------------------------------}
+    
+    type Output = Writer Code;
+    
+    state Compiler : Output
+    {
+        counter :: Int;
+    }
+    
+    --fresh :: Compiler Int;
+    fresh = {
+        v     <: counter;
+        v + 1 >: counter;
+        return v;
+    };
+    
+    --emit :: Code -> Compiler ();
+    emit = lift . tell;
+    
+    --compExpr' :: Code -> Expr -> Code;
+    compExpr' xs (Val v)     = PUSH v  : xs;
+    compExpr' xs (Var n)     = PUSHV n : xs;
+    compExpr' xs (App o l r) = compExpr' (compExpr' (DO o : xs) r) l;
+    
+    compExpr :: Expr -> Code;
+    compExpr = compExpr' [];
+    
+    compProg :: Prog -> Compiler ();
+    compProg (Assign n e) = {
+        emit (compExpr e);
+        emit [POP n];
+    };
+    compProg (If e t f) = {
+        x <- fresh;
+        y <- fresh;
+        emit (compExpr e);
+        emit [JUMPZ x];
+        compProg t;
+        emit [JUMP y, LABEL x];
+        compProg f;
+        emit [LABEL y];
+    };
+    compProg (While e p) = {
+        x <- fresh;
+        y <- fresh;
+        emit [LABEL x];
+        emit (compExpr e);
+        emit [JUMPZ y];
+        compProg p;
+        emit [JUMP x, LABEL y];
+    };
+    compProg (Seqn ps) = mapM_ compProg ps;
+    
+    comp :: Prog -> Code;
+    comp = execWriter . flip evalStateT (Compiler 0) . compProg;
+    
+    {----------------------------------------------------------------------}
+    {-- Test Programs                                                     -}
+    {----------------------------------------------------------------------}
+    
+    fac :: Int -> Prog;
+    fac n = Seqn [
+        Assign "A" (Val 1),
+        Assign "B" (Val n),
+        While (Var "B") (Seqn [
+            Assign "A" (App Mul (Var "A") (Var "B")),
+            Assign "B" (App Sub (Var "B") (Val 1))])];
+            
+    {----------------------------------------------------------------------}
+    {-- Virtual Machine                                                   -}
+    {----------------------------------------------------------------------}
+    
+    state VM
+    {
+        vmData    :: Mem;
+        vmProgram :: Code;
+        vmStack   :: Stack;
+    }
+    
+    runOp :: Op -> Int -> Int -> Int;
+    runOp Add x y = x + y;
+    runOp Sub x y = x - y;
+    runOp Mul x y = x * y;
+    runOp Div x y = error "div";
+    
+    memLookup :: Name -> Mem -> Int;
+    memLookup n = fromMaybe 0 . lookup n;
+    
+    load :: Name -> VM Int;
+    load n = {
+        vs <: vmData;
+        return (memLookup n vs);
+    };
+    
+    store :: Name -> Int -> VM ();
+    store n v = {
+        vs         <: vmData;
+        (n,v) : vs >: vmData;
+    };
+    
+    push :: Int -> VM ();
+    push v = {
+        vs     <: vmStack;
+        v : vs >: vmStack;
+    };
+    
+    pop :: VM Int;
+    pop = {
+        (v:vs) <: vmStack;
+        vs     >: vmStack;
+        return v;
+    };
+    
+    isLabel :: Label -> Inst -> Bool;
+    isLabel n (LABEL l) = n == l;
+    isLabel _ _         = False;
+    
+    label :: Label -> Code -> Code;
+    label l = dropWhile (not . isLabel l);
+    
+    jump :: (Code -> Code) -> VM ();
+    jump f = {
+        cs <: vmProgram;
+        run (f cs);
+    };
+    
+    run :: Code -> VM ();
+    run []            = return ();
+    run (PUSH v : xs) = {
+        push v;
+        run xs;
+    };
+    run (PUSHV n : xs) = {
+        v <- load n;
+        push v;
+        run xs;
+    };
+    run (POP n : xs) = {
+        v <- pop;
+        store n v;
+        run xs;
+    };
+    run (DO op : xs) = {
+        y <- pop;
+        x <- pop;
+        push (runOp op x y);
+        run xs;
+    };
+    run (JUMP l : xs) = {
+        jump (label l);
+    };
+    run (JUMPZ l : xs) = {
+        v <- pop;
+        if v == 0 then 
+            jump (label l)
+        else
+            run xs;
+    };
+    run (LABEL l : xs) = {
+        run xs;
+    };
+    
+    exec :: Code -> Mem;
+    exec xs = vmData (execState (run xs) (VM [] xs [])); 
+    
+    runProgram :: Prog -> Mem;
+    runProgram = exec . comp;
+    
+    main :: IO ();
+    main = print (runProgram (fac 10));
+}
