@@ -6,9 +6,6 @@ module Cada.List
     import Cada.Class.Eq;
     import Cada.Class.Num;
     import Cada.Class.Show;
-    import Cada.Class.Monoid;
-    import Cada.Class.Monad;
-    import Cada.Class.Collection;
     import Cada.Bool;
     import Cada.Maybe;
     
@@ -21,44 +18,6 @@ module Cada.List
     instance Show a => Show [a]
     {
         show xs = "[" ++ concat (intersperse "," (map show xs)) ++ "]";
-    }
-    
-    instance Monoid [a]
-    {
-        mempty :: [a];
-        mempty  = [];
-        
-        mappend :: [a] -> [a] -> [a];
-        mappend = (++);
-        
-        mconcat :: [[a]] -> [a];
-        mconcat = concat;
-    }
-    
-    instance Collection []
-    {
-        head :: [a] -> a;
-        head (x:_) = x;
-        
-        tail :: [a] -> [a];
-        tail (_:xs) = xs;
-        
-        init :: [a] -> [a];
-        init [x]    = [];
-        init (x:xs) = x : init xs;
-        
-        last :: [a] -> a;
-        last [x]    = x;
-        last (_:xs) = last xs;
-    }
-    
-    instance Monad []
-    {
-        return :: a -> [a];
-        return x = [x];
-        
-        (>>=) :: [a] -> (a -> [b]) -> [b];
-        xs >>= f = foldr ((++) . f) [] xs;
     }
     
     foldr :: (a -> b -> b) -> b -> [a] -> b;

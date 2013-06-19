@@ -1,11 +1,13 @@
 module NCC.Internal (
+    P.Bool(..),
     P.Int,
     P.Char,
     P.IO,
     P.putStrLn,
+    P.getLine,
     P.error,
-    boolCoerce,
     fromInteger,
+    ifThenElse,
     intEq,
     intIneq,
     intAdd,
@@ -14,18 +16,21 @@ module NCC.Internal (
     intNegate,
     intAbs,
     intShow,
+    charEq,
+    charIneq,
+    charShow,
     returnIO,
     bindIO
 ) where
 
 import qualified Prelude as P
 
-boolCoerce :: a -> a -> P.Bool -> a
-boolCoerce t _ P.True  = t
-boolCoerce _ f P.False = f
-
 fromInteger :: P.Integer -> P.Int
 fromInteger = P.fromInteger
+
+ifThenElse :: P.Bool -> a -> a -> a
+ifThenElse P.True  t _ = t
+ifThenElse P.False _ f = f
 
 intEq :: P.Int -> P.Int -> P.Bool
 intEq = (P.==)
@@ -50,6 +55,15 @@ intAbs = P.abs
 
 intShow :: P.Int -> P.String
 intShow = P.show
+
+charEq :: P.Char -> P.Char -> P.Bool
+charEq = (P.==)
+
+charIneq :: P.Char -> P.Char -> P.Bool
+charIneq = (P./=)
+
+charShow :: P.Char -> P.String
+charShow = P.show
 
 returnIO :: a -> P.IO a
 returnIO = P.return

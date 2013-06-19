@@ -4,4 +4,13 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
+*.log
+*.exe
+
 .virthualenv
+.shelly
+
+src/NCC/Cada/Lexer.hs
+src/NCC/Cada/Parser.hs
+
+*.co

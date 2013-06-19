@@ -3,11 +3,24 @@ module Cada.Class.Monoid
     import NCC.Internal;
     
     import Cada;
+    import Cada.List;
     
     class Monoid a
     {
         mempty  :: a;
         mappend :: a -> a -> a;
         mconcat :: [a] -> a;
+    }
+    
+    instance Monoid [a]
+    {
+        mempty :: [a];
+        mempty  = [];
+        
+        mappend :: [a] -> [a] -> [a];
+        mappend = (++);
+        
+        mconcat :: [[a]] -> [a];
+        mconcat = concat;
     }
 }

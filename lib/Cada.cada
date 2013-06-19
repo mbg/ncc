@@ -11,11 +11,18 @@ module Cada
     otherwise :: Bool;
     otherwise = True;
     
+
+    
+
+
+    
     type String = [Char];
     
     {----------------------------------------------------------------------}
     {-- Basic type classes                                                -}
     {----------------------------------------------------------------------}
+    
+
     
     class Enum a 
     {
@@ -33,6 +40,36 @@ module Cada
     {
         minBound, maxBound :: a;
     }
+    
+    class Collection c
+    {
+        head :: c a -> a;
+        tail :: c a -> c a;
+        init :: c a -> c a;
+        last :: c a -> a;
+    }
+    
+    instance Collection []
+    {
+        head :: [a] -> a;
+        head (x:_) = x;
+        
+        tail :: [a] -> [a];
+        tail (_:xs) = xs;
+        
+        init :: [a] -> [a];
+        init [x]    = [];
+        init (x:xs) = x : init xs;
+        
+        last :: [a] -> a;
+        last [x]    = x;
+        last (_:xs) = last xs;
+    }
+    
+    
+    {- State monad -} 
+    
+
     
     {- Misc -}
     id :: a -> a;
