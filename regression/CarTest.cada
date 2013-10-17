@@ -1,0 +1,25 @@
+module CarTest
+{
+    state Driver
+    {
+        name :: String;
+        age  :: Int;
+    }
+
+    state Car
+    {
+        driver :: DriverData;
+        make   :: String;
+    }
+
+    owns :: Car String;
+    owns = {
+        --n <: driver.name;
+        n <: make;
+        return n;
+    };
+
+    main = {
+        putStrLn (evalState owns (Car (Driver "tom" 18) "UoC"));
+    };
+}

@@ -21,6 +21,7 @@
 >   import Control.Monad.Error
     
 >   import qualified Data.List as L
+>   import Data.List.Split (splitOn)
 >   import qualified Data.Map as M
 >   import qualified Data.Set as S
     
@@ -203,6 +204,18 @@
     {-- Statements                                                        -}
     {----------------------------------------------------------------------}   
 
+>   tiGetter :: Envs -> Assumps -> [String] -> TI (Context, MonoType)
+>   tiGetter env as [n] = do
+>       pt           <- find (n ++ ".get") as
+>       (ntx :=> nt) <- newInst pt
+>       return (ntx,nt)
+>   tiGetter env as (n:ns) = do
+>       pt           <- find (n ++ ".get") as
+>       (ntx :=> nt) <- newInst pt
+>       pt'          <- find ">>=" as
+>       (btx :=> bt) <- newInst pt'
+>       return (ntx `S.union` btx,nt)
+
     p <- e      ~>      e   >>= \p -> ...  
     e           ~>      e   >>= \_ -> ...
     p <: n      ~>  n.get   >>= \p -> ...
@@ -229,8 +242,9 @@
 >   tiStmt' env as (Getter p n)  = do
 >       pt           <- find ">>=" as
 >       (btx :=> bt) <- newInst pt
->       pt'          <- find (n ++ ".get") as
->       (ntx :=> nt) <- newInst pt'
+>       (ntx, nt)    <- tiGetter env as (splitOn "." n)
+>       --pt'          <- find (n ++ ".get") as
+>       --(ntx :=> nt) <- newInst pt'
 >       t            <- newTyVar KStar
 >       unify env (nt `mkFun` t) bt
 >       return (btx `S.union` ntx, t, p)

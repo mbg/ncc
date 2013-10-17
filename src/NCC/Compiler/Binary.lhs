@@ -30,6 +30,7 @@
 >   import TypeSystem.Alias
 >   import TypeSystem.TypeClass
 >   import TypeSystem.Instance
+>   import TypeSystem.StateType
 >   import TypeSystem.Environments
 
     {----------------------------------------------------------------------}
@@ -175,6 +176,16 @@
 >           put qt
 >
 >       get = Inst <$> get <*> pure []
+
+>   instance Binary StateType where
+>       put Simple      = putWord8 0
+>       put Transformer = putWord8 1
+>
+>       get = do
+>           c <- getWord8
+>           case c of
+>               0 -> pure Simple
+>               1 -> pure Transformer
 
 >   instance Binary Envs where
 >       put = undefined

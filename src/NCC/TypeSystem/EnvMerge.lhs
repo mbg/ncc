@@ -67,7 +67,8 @@
 >           mergeEnv errorIfDefined alEnv a b  <*>
 >           mergeEnv errorIfDefined clEnv a b  <*>
 >           mergeEnv errorIfDefined exEnv a b  <*>
->           pure M.empty
+>           pure M.empty                       <*>
+>           mergeEnv errorIfDefined stEnv a b
 >       iss <- mergeEnv (mergeUnlessOverlap env) inEnv a b
 >       return $ env { inEnv = iss }
 

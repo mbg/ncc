@@ -30,7 +30,7 @@
 >       cfgStopAfterParser  :: Bool,
 >       cfgKeepHs           :: Bool,
 >       cfgNoImplictPrelude :: Bool
->   }  
+>   } deriving Show
     
     {----------------------------------------------------------------------}
     {-- Configuration Parsing                                             -}

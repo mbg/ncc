@@ -47,7 +47,7 @@ module Cada
         tail :: c a -> c a;
         init :: c a -> c a;
         last :: c a -> a;
-    }
+    } 
     
     instance Collection []
     {
@@ -64,7 +64,7 @@ module Cada
         last :: [a] -> a;
         last [x]    = x;
         last (_:xs) = last xs;
-    }
+    } 
     
     
     {- State monad -} 

@@ -6,6 +6,7 @@ cabal-dev
 *.chs.h
 *.log
 *.exe
+*~
 
 .virthualenv
 .shelly

@@ -98,7 +98,7 @@
 >       ("getLine", mkPoly (TApp ioTy stringTy))]
 
 >   nccInternal :: Envs
->   nccInternal = Envs nccADTs nccInternalAliases M.empty nccInternalExpls M.empty
+>   nccInternal = Envs nccADTs nccInternalAliases M.empty nccInternalExpls M.empty M.empty
 
 {--------------------------------------------------------------------------------------------------
                                             End of File                                            

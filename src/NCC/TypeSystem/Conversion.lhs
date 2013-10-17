@@ -45,6 +45,7 @@
 >   import TypeSystem.Assump
 >   import TypeSystem.Environments
 >   import TypeSystem.EnvMerge
+>   import TypeSystem.StateType
 
     {----------------------------------------------------------------------}
     {-- Conversion Monad                                                  -}
@@ -381,11 +382,14 @@
     {----------------------------------------------------------------------}
    
 >   mkState :: StateDefinition -> EnvsTrans ()
->   mkState (SDef _ _ _ _ al adt _) = do
+>   mkState (SDef _ _ p _ al adt _) = do
 >       al'  <- mkAlias al
 >       adt' <- mkADT adt
 >       modify $ addADT (dDefName adt) adt'
 >       modify $ addAlias (aDefName al) al'
+>       modify $ addSt (dDefName adt) (case p of
+>           Nothing  -> Simple
+>           (Just _) -> Transformer)
     
     {----------------------------------------------------------------------}
     {-- Environments                                                      -}

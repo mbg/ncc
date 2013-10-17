@@ -47,7 +47,7 @@
 >       "Cada.Class.Functor",
 >       "Cada.Class.Monad",
 >       "Cada.Class.MonadTrans",
->       "Cada.Class.Collection",
+>       --"Cada.Class.Collection",
 >       "Cada.Class.Monoid",
 >       "Cada.Bool",
 >       "Cada.Maybe",

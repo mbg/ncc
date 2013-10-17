@@ -10,6 +10,7 @@
 >   ClEnv,
 >   ExEnv,
 >   InEnv,
+>   StEnv,
 >   Envs(..),
 >   initialEnvs,
 >   addADT,
@@ -17,6 +18,7 @@
 >   addClass,
 >   addExpl,
 >   addAssumps,
+>   addSt,
 >   getExpl,
 >   getClsExpl,
 >   addInstance,
@@ -47,6 +49,7 @@
 >   import TypeSystem.TypeClass
 >   import TypeSystem.Instance
 >   import TypeSystem.Assump
+>   import TypeSystem.StateType
 
     {----------------------------------------------------------------------}
     {-- Environments                                                      -}
@@ -63,17 +66,19 @@
 >   type ClEnv  = Env TypeClass
 >   type ExEnv  = Env PolyType
 >   type InEnv  = Env [Instance]
+>   type StEnv  = Env StateType
 
 >   data Envs = Envs {
->       adtEnv :: ADTEnv,
->       alEnv  :: AlEnv,
->       clEnv  :: ClEnv,
->       exEnv  :: ExEnv,
->       inEnv  :: InEnv
+>       adtEnv :: ADTEnv, -- algebraic data types
+>       alEnv  :: AlEnv,  -- type functions
+>       clEnv  :: ClEnv,  -- type classes
+>       exEnv  :: ExEnv,  -- typings
+>       inEnv  :: InEnv,  -- class instances
+>       stEnv  :: StEnv   -- state types
 >   }
 
 >   initialEnvs :: Envs
->   initialEnvs = Envs M.empty M.empty M.empty M.empty M.empty
+>   initialEnvs = Envs M.empty M.empty M.empty M.empty M.empty M.empty
 
 >   addADT :: String -> ADT -> Envs -> Envs
 >   addADT n adt envs = envs { adtEnv = M.insert n adt (adtEnv envs) }
@@ -91,6 +96,9 @@
 
 >   addAssumps :: Assumps -> Envs -> Envs
 >   addAssumps as envs = envs { exEnv = as `M.union` (exEnv envs) }
+
+>   addSt :: String -> StateType -> Envs -> Envs
+>   addSt n st envs = envs { stEnv = M.insert n st (stEnv envs) }
 
 >   getExpl :: String -> Envs -> Maybe PolyType
 >   getExpl n envs = M.lookup n (exEnv envs)
@@ -115,7 +123,7 @@
 >   kinds = M.map kind
 
 >   toKindIndex :: Envs -> KindIndex
->   toKindIndex (Envs adt als cls exs ins) = 
+>   toKindIndex (Envs adt als cls exs ins sts) = 
 >       kinds adt `M.union` kinds als `M.union` kinds cls
 
 >   toKindAssumps :: Envs -> Assumps
@@ -131,7 +139,7 @@
 >   mapUnions = M.foldl M.union M.empty
     
 >   toAssumps :: Envs -> Assumps
->   toAssumps (Envs adt als cls exs ins) = 
+>   toAssumps (Envs adt als cls exs ins sts) = 
 >       mapUnions (M.map adtCtrs adt) `M.union` 
 >       mapUnions (M.map clAssumps cls) `M.union`
 >       exs
@@ -150,7 +158,7 @@
 >   ppInstances (n,iss) = ppDefsW (ppInstance n) ppNewLine iss
     
 >   ppEnvs :: Envs -> ShowS
->   ppEnvs (Envs adt als cls exs ins) =
+>   ppEnvs (Envs adt als cls exs ins sts) =
 >       showString "# Algebraic data types:\n" .
 >       ppDefsW (uncurry ppADT) ppNewLine (M.toList adt) .
 >       showString "\n# Type aliases:\n" .

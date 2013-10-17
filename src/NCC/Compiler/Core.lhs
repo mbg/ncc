@@ -19,7 +19,7 @@
 >   import System.Exit
 >   import System.FilePath
 >   import System.IO hiding (hGetContents)
->   import System.IO.Strict
+>   import System.IO.Strict (hGetContents, run)
 
 >   import Control.Applicative
 >   import Control.Exception
@@ -120,7 +120,7 @@
 >   initCtx fs = do
 >       addPath (sourceDir fs)
 >       logSection $ "Parsing " ++ fs 
->       xs <- liftIO $ withFile fs ReadMode hGetContents
+>       xs <- liftIO $ withFile fs ReadMode (\h -> run (hGetContents h))
 >       m  <- runParser xs
 >       --nameCheck (takeBaseName fs) (unL m) --TODO: consider modules like NCC.Internal!
 >       logSection $ "AST for " ++ fs 
