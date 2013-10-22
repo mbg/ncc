@@ -1,25 +1,49 @@
 module CarTest
 {
-    state Driver
+    state Pocket a
     {
-        name :: String;
-        age  :: Int;
+        contents :: a;
     }
 
-    state Car
+    state Driver a b
     {
-        driver :: DriverData;
+        name        :: String;
+        age         :: Int;
+        leftPocket  :: PocketData a;
+        rightPocket :: PocketData b;
+    }
+
+    state Car a b
+    {
+        driver :: DriverData a b;
         make   :: String;
     }
 
-    owns :: Car String;
+    transferOwnership :: b -> Car a b ();
+    transferOwnership n = {
+        n >: driver.rightPocket.contents;
+    };
+
+    -- BUG: there is probably a bug in the ncc typechecker, because this compiles with
+    --  owns :: Car a b String
+    -- but it shouldn't (ghc complains later on)
+    owns :: Car a b b;
     owns = {
-        --n <: driver.name;
-        n <: make;
+        n <: driver.rightPocket.contents;
         return n;
     };
 
+    initialState :: CarData Int String;
+    initialState = (Car (Driver "tom" 18 (Pocket 5) (Pocket "keys")) "UoC");
+
+    -- BUG: currently we do not add dependencies for auto-generated names when determining the order in which TI should be run
+    -- and as a result an implicitly-typed `main' function would be run through TI before e.g. driver.get.
+
+    -- BUG: for some reason, if we return an Int from the argument of putStrLn, ncc won't complain that String /= Int
+    -- BUG: if we use n <: driver.leftPocket.contents, ncc doesn't complain even though n should be of type String (may be related to the previous bug)
+    main :: IO ();
     main = {
-        putStrLn (evalState owns (Car (Driver "tom" 18) "UoC"));
+        putStrLn (evalState owns initialState);
+        putStrLn (evalState { transferOwnership "carl"; n <: driver.rightPocket.contents; return n; } initialState);
     };
 }

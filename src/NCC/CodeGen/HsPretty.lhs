@@ -19,6 +19,7 @@
 > ) where
 
 >   import Data.Char
+>   import Data.List.Split (splitOn)
 >   import qualified Data.Map as M
 >   import qualified Data.Set as S
 
@@ -239,11 +240,42 @@
 >   hsLiteral i (PairLit es) = ppInParens $ ppDefsW (hsExpr' 0 i) (showChar ',') es 
 >   hsLiteral i (ListLit es) = ppList $ ppDefsW (hsExpr' 0 i) (showChar ',') es
 
+>   internalGetterName :: String
+>   internalGetterName = "__internal_tmp_getter"
+
+>   hsGetter' :: [String] -> ShowS
+>   hsGetter' [n]    = showString n
+>   hsGetter' (n:ns) = hsGetter' ns . showString " . " . showString n
+
+>   hsGetter :: [String] -> ShowS
+>   hsGetter [n]    = hsName (n ++ ".get")
+>   hsGetter (n:ns) = hsName (n ++ ".get") . 
+>       showString " >>= \\" . 
+>       showString internalGetterName . 
+>       showString " -> return " . 
+>       ppInParens (
+>           ppInParens (hsGetter' ns) . ppSpace . showString internalGetterName
+>       )
+
+>   internalSetterName :: String
+>   internalSetterName = "__internal_tmp_setter"
+
+>   hsSetter' :: [String] -> ShowS -> ShowS -> ShowS
+>   hsSetter' [n]    s v = ppInParens $ hsName (n ++ ".update") . ppSpace . ppInParens (showString "const " . v) -- showString n . showString " = " . v
+>   hsSetter' (n:ns) s v = ppInParens $ hsName (n ++ ".update") . ppSpace . ppInParens (hsSetter' ns s v) -- showString n . showString " = " . ppInParens (showString n . s) . showString " { " . hsSetter' ns (ppInParens (showString n . s)) v .  showString " } "
+
+>   hsSetter :: [String] -> ShowS -> ShowS
+>   hsSetter [n]    v = hsName (n ++ ".set") . ppSpace . v
+>   hsSetter (n:ns) v = hsName (n ++ ".modify") . ppInParens ( 
+>       --showString "\\s -> s { " .
+>       hsSetter' ns (showString "s") v) -- .
+>       --showString " }")
+
 >   hsStmt :: Int -> Statement -> ShowS
 >   hsStmt i (Statement e) = ppNewLine . ppIndent i . hsExpr' 0 i e 
 >   hsStmt i (Bind p e)    = ppNewLine . ppIndent i . ppPattern p . showString " <- " . hsExpr' 0 i e 
->   hsStmt i (Getter p n)  = ppNewLine . ppIndent i . ppPattern p . showString " <- " . hsName (n ++ ".get") 
->   hsStmt i (Setter e n)  = ppNewLine . ppIndent i . hsName (n ++ ".set") . ppSpace . hsExpr' 10 i e 
+>   hsStmt i (Getter p n)  = ppNewLine . ppIndent i . ppPattern p . showString " <- " . hsGetter (splitOn "." n)
+>   hsStmt i (Setter e n)  = ppNewLine . ppIndent i . hsSetter (splitOn "." n) (hsExpr' 10 i e) 
 
 >   hsDo :: Int -> Int -> [Statement] -> ShowS
 >   hsDo p i xs = ppInOptParens (p>=5) $ showString "do" .  ppDefs (hsStmt (i+1)) xs 

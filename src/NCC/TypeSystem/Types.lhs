@@ -149,7 +149,7 @@ representations as opposed to "surface" representations which are used in the AS
 >       | isTuple f = ppInParens $ ppMonoType 0 a . showChar ',' . ppMonoType 0 b
 >   ppMonoType p (TApp f a)
 >       | isList f  = ppList $ ppMonoType 0 a
->       | otherwise = ppInOptParens (p>=10) $
+>       | otherwise = ppInParens {-ppInOptParens (p>=10)-} $
 >           ppMonoType 5 f .
 >           ppSpace .
 >           ppMonoType 10 a

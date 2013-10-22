@@ -204,6 +204,35 @@
     {-- Statements                                                        -}
     {----------------------------------------------------------------------}   
 
+>   internalGetterName :: String
+>   internalGetterName = "__internal_tmp_getter"
+
+>   tiGetter' :: Envs -> Assumps -> [String] -> TI (Context, MonoType)
+>   tiGetter' env as [n] = do
+>       pt            <- find n as
+>       (ntx :=> nmt) <- newInst pt
+>       --tt            <- find internalGetterName as
+>       --(ttx :=> tmt) <- newInst pt
+>       --t             <- newTyVar KStar
+>       --unify env (tmt `mkFun` t) nmt
+>       --return (ntx `S.union` ttx, t)
+>       return (ntx, nmt)
+>   tiGetter' env as (n:ns) = do
+>       pt            <- find n as
+>       (ntx :=> nmt) <- newInst pt
+>       --tt            <- find internalGetterName as
+>       --(ttx :=> tmt) <- newInst pt
+>       --t             <- newTyVar KStar
+>       --unify env (tmt `mkFun` t) nmt
+>       --return (ntx `S.union` ttx, t)
+>       (mtx, mmt)    <- tiGetter' env as ns
+>       tx            <- newTyVar KStar
+>       ta            <- newTyVar KStar
+>       tb            <- newTyVar KStar
+>       unify env (tx `mkFun` ta) nmt
+>       unify env (ta `mkFun` tb) mmt
+>       return (ntx `S.union` mtx, tx `mkFun` tb)
+
 >   tiGetter :: Envs -> Assumps -> [String] -> TI (Context, MonoType)
 >   tiGetter env as [n] = do
 >       pt           <- find (n ++ ".get") as
@@ -214,7 +243,46 @@
 >       (ntx :=> nt) <- newInst pt
 >       pt'          <- find ">>=" as
 >       (btx :=> bt) <- newInst pt'
->       return (ntx `S.union` btx,nt)
+>       v            <- newTyVar KStar
+>       (nsctx,nst)  <- tiGetter' env ((internalGetterName ~= mkPoly v) <> as) ns
+>       r            <- newTyVar KStar
+>       unify env (v `mkFun` r) nst
+>       rt           <- find "return" as
+>       (rtx :=> rmt) <- newInst rt
+>       rm            <- newTyVar KStar
+>       unify env (r `mkFun` rm) rmt
+>       return (S.empty {-`S.union` btx `S.union` nsctx `S.union` rtx-},rm)
+
+>   tiSetter' :: Envs -> Assumps -> [String] -> Expr -> MonoType -> TI (Context, MonoType)
+>   tiSetter' env as [n] e st = do
+>       pt           <- find n as           -- contents :: PocketData -> String
+>       (ntx :=> nt) <- newInst pt
+>       (etx, et)    <- tiExpr' env as e    -- :: String
+>       -- we need to check that nt = st -> et
+>       unify env (st `mkFun` et) nt
+>       return (etx, st)
+>   tiSetter' env as (n:ns) e st = do
+>       pt           <- find n as           -- leftPocket :: DriverData -> PocketData
+>       (ntx :=> nt) <- newInst pt
+>       st'          <- newTyVar KStar
+>       (etx, et)    <- tiSetter' env as ns e st'    -- :: PocketData
+>       -- we need to check that nt = st -> et
+>       unify env (st `mkFun` et) nt
+>       --unify env st st'
+>       return (etx, st)
+
+>   tiSetter :: Envs -> Assumps -> [String] -> Expr -> TI (Context, MonoType)
+>   tiSetter env as [n]    e = do tiExpr' env as (App (Var (n ++ ".set")) e)
+>   tiSetter env as (n:ns) e = do
+>       pt           <- find (n ++ ".modify") as
+>       (ntx :=> nt) <- newInst pt
+>       st           <- newTyVar KStar              -- st is the initial state type (which we don't know)
+>       (rtx, rt)    <- tiSetter' env as ns e st    -- rt is what the setter returns (should be the same as st)
+>       ft           <- newTyVar KStar
+>       unify env (st `mkFun` rt) ft                -- ft is the argument type of nt
+>       rm           <- newTyVar KStar
+>       unify env (ft `mkFun` rm) nt                -- nt is the type of n.modify
+>       return (ntx `S.union` rtx, rm)
 
     p <- e      ~>      e   >>= \p -> ...  
     e           ~>      e   >>= \_ -> ...
@@ -251,14 +319,15 @@
 >   tiStmt' env as (Setter e n)  = do
 >       pt           <- find ">>=" as
 >       (btx :=> bt) <- newInst pt
->       (etx, et)    <- tiExpr env as (App (Var (n ++ ".set")) e)
+>       --(etx, et)    <- tiExpr env as (App (Var (n ++ ".set")) e)
+>       (etx, et)    <- tiSetter env as (splitOn "." n) e
 >       t            <- newTyVar KStar
 >       unify env (et `mkFun` t) bt
 >       return (btx `S.union` etx, t, Wildcard)      
 
 >   tiStmts :: Infer [Statement] MonoType
 >   tiStmts env as [Statement e] = tiExpr' env as e
->   tiStmts env as [Setter e n]  = tiExpr' env as (App (Var (n ++ ".set")) e)
+>   tiStmts env as [Setter e n]  = tiSetter env as (splitOn "." n) e --tiExpr' env as (App (Var (n ++ ".set")) e)
 >   tiStmts env as (x:xs)        = do
 >       (ctx,et,p)   <- tiStmt env as x
 >       (ptx,as',pt) <- tiPattern env as p

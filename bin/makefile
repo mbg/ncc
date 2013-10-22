@@ -11,4 +11,4 @@ compiler:
 	./ncc ../regression/MonadicCompiler.cada -o afpcwk2 --entry MonadicCompiler --path  ../lib/
 
 car: ../regression/CarTest.cada
-	./ncc ../regression/CarTest.cada -o car --entry CarTest --path ../lib/
+	./ncc ../regression/CarTest.cada -o car --entry CarTest --path ../lib/ --keep-hs --trace

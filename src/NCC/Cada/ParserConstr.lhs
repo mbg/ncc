@@ -441,7 +441,7 @@
 
 >   modifyCtrVal :: Pattern -> Int -> String -> Expr
 >   modifyCtrVal (CtrPattern c es) i n = foldl App (Ctr c) $ 
->       map (\(VarPattern v,j) -> if i == j then Var n else Var v) ps
+>       map (\(VarPattern v,j) -> if i == j then App (Var n) (Var v) else Var v) ps -- then Var n else Var v
 >       where
 >           ps = zip es [0..]
 >           
@@ -450,13 +450,21 @@
 >   mkGetter n = Eq (n ++ ".get") $ Alt [] $ App (Var "gets") (Var n)
 
 >   mkSetter :: String -> Pattern -> Int -> Equation
->   mkSetter n p i = Eq (n ++ ".set") $ Alt [VarPattern "v"] $ App (Var "modify") (Abs $ Alt [p] (modifyCtrVal p i "v"))
+>   mkSetter n p i = Eq (n ++ ".set") $ Alt [VarPattern "v"] $ App (Var "modify") (App (Var (n ++ ".update")) (App (Var "const") (Var "v"))) --(Abs $ Alt [p] (modifyCtrVal p i "v"))
+
+>   mkUpdate :: String -> Pattern -> Int -> Equation
+>   mkUpdate n p i = Eq (n ++ ".update") $ Alt [VarPattern "f"] $ (Abs $ Alt [p] (modifyCtrVal p i "f"))
+
+>   mkModify :: String -> Equation
+>   mkModify n = Eq (n ++ ".modify") $ Alt [VarPattern "f"] $ Do [Bind (VarPattern "v") (Var (n ++ ".get")), Statement (App (Var (n ++ ".set")) (App (Var "f") (Var "v")))]
 
 >   makeAccessor :: Pattern -> DataField -> (Int,[Equation]) -> (Int,[Equation])
->   makeAccessor p (DField n _ _) (i,eqs) = (i-1, get : set : eqs)
+>   makeAccessor p (DField n _ _) (i,eqs) = (i-1, get : set : upd : mod : eqs)
 >       where
 >           get = mkGetter n
 >           set = mkSetter n p i
+>           upd = mkUpdate n p i
+>           mod = mkModify n
 
 >   makeAccessors :: Pattern -> [DataField] -> [Equation]
 >   makeAccessors pat fs = snd $ foldr (makeAccessor pat) (length fs - 1,[]) fs
