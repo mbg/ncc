@@ -66,6 +66,7 @@ $chesc     = [abfnrtv\\\"\'\&]
            | "=>"
            | "<:"
            | ">:"
+           | ":="
            
 @var       = $lower $idchar*
 @ctr       = $upper $idchar*

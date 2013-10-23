@@ -190,6 +190,22 @@
 >       ppTyping . 
 >       ppType t
 
+>   ppStateDataFields :: [StateDataField] -> ShowS
+>   ppStateDataFields []     = id
+>   ppStateDataFields [c]    = ppStateDataField c . ppNewLine
+>   ppStateDataFields (c:cs) = ppStateDataField c . showChar ',' . ppNewLine . ppStateDataFields cs
+
+>   ppStateDataField :: StateDataField -> ShowS
+>   ppStateDataField (SField n e t p) = 
+>       ppIndent 3 . 
+>       ppPosn (FilePos p) .
+>       ppSpace .
+>       showString n . 
+>       showString " = " .
+>       ppExpr 4 e .
+>       ppTyping . 
+>       ppType t
+
 >   ppDataCtrs :: [Loc (Typed DataConstructor)] -> ShowS
 >   ppDataCtrs []     = id
 >   ppDataCtrs [c]    = ppDataCtr (unL c) . ppNewLine
@@ -273,7 +289,7 @@
 >       ppSpace .
 >       ppDefs ppTypeParam (sDefParams s) .
 >       ppMaybe ppStateP (sDefParent s) .
->       ppInContext 1 (ppDataFields (sDefCtrs s)) .
+>       ppInContext 1 (ppStateDataFields (sDefCtrs s)) .
 >       ppDefsW (ppEquation' 1) ppNewLine (sDefAcs s)
 
 >   ppDecType :: DecType -> ShowS

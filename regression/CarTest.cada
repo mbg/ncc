@@ -21,7 +21,8 @@ module CarTest
 
     transferOwnership :: b -> Car a b ();
     transferOwnership n = {
-        n >: driver.rightPocket.contents;
+        --n >: driver.rightPocket.contents;
+        driver.rightPocket.contents := n;
     };
 
     -- BUG: there is probably a bug in the ncc typechecker, because this compiles with
@@ -31,6 +32,7 @@ module CarTest
     owns = {
         n <: driver.rightPocket.contents;
         return n;
+        --driver.rightPocket.contents;
     };
 
     initialState :: CarData Int String;
@@ -43,7 +45,7 @@ module CarTest
     -- BUG: if we use n <: driver.leftPocket.contents, ncc doesn't complain even though n should be of type String (may be related to the previous bug)
     main :: IO ();
     main = {
-        putStrLn (evalState owns initialState);
-        putStrLn (evalState { transferOwnership "carl"; n <: driver.rightPocket.contents; return n; } initialState);
+        putStrLn (evalState owns car.default);
+        putStrLn (evalState { transferOwnership "mark"; n <: driver.rightPocket.contents; return n; } initialState);
     };
 }

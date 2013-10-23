@@ -39,6 +39,7 @@ types which are constructed by the parser from a Cada source file.
 >   DataDefType(..),
 >   DataDefinition(..),
 >   AliasDefinition(..),
+>   StateDataField(..),
 >   StateDefinition(..),
 >   Option(..),
 >   Statement(..),
@@ -198,11 +199,18 @@ types which are constructed by the parser from a Cada source file.
 >       aDefType   :: SType
 >   }
 
+>   data StateDataField = SField {
+>       sFieldName :: String,
+>       sFieldVal  :: Expr,
+>       sFieldType :: SType,
+>       sFieldPos  :: AlexPosn
+>   }
+
 >   data StateDefinition = SDef {
 >       sDefName   :: String,
 >       sDefParams :: [TypeParam],
 >       sDefParent :: Maybe SType,
->       sDefCtrs   :: [DataField],
+>       sDefCtrs   :: [StateDataField],
 >       sDefType   :: AliasDefinition,
 >       sDefData   :: DataDefinition,
 >       sDefAcs    :: [Equation]

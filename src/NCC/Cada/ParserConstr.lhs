@@ -6,6 +6,7 @@
 > module Cada.ParserConstr (
 >   makeCtrPattern,
 >   exprToPattern,
+>   exprToField,
 >   makeContext,
 >   makeTyParam,
 >   makeTyVar,
@@ -15,6 +16,7 @@
 >   makeInstance,
 >   makeDataCtrL,
 >   makeField,
+>   makeSField,
 >   makeEnum,
 >   makeDataS,
 >   makeDataN,
@@ -22,6 +24,7 @@
 >   makeState,
 >   makeBind,
 >   makeSetter,
+>   makeSetter',
 >   makeGetter,
 >   checkStmts,
 >   makeCond,
@@ -43,6 +46,7 @@
     
 >   import Control.Applicative
     
+>   import Data.Char (toLower)
 >   import Data.List ((\\))
 >   import Data.Foldable (foldrM)
     
@@ -84,6 +88,10 @@
 >       r' <- exprToPattern r
 >       return $ CtrPattern ":" [l',r']
 >   exprToPattern _         = error "exprToPattern2"
+
+>   exprToField :: Expr -> Parser String
+>   exprToField (Var n) = return n
+>   exprToField _       = error "exprToField expected something else"
 
     {----------------------------------------------------------------------}
     {-- Validation & Construction Functions for Types                     -}
@@ -264,6 +272,11 @@
 >   makeField (p,n) t = do
 >       qualErrH (FilePos p) (tVal n)
 >       return $ DField (tVal n) t p
+
+>   makeSField :: TokenP -> Expr -> SType -> Parser StateDataField
+>   makeSField (p,n) e t = do
+>       qualErrH (FilePos p) (tVal n)
+>       return $ SField (tVal n) e t p
     
     Constructs a DataDefinition from a String `n' and a list of data
     constructors `cs'.
@@ -458,32 +471,42 @@
 >   mkModify :: String -> Equation
 >   mkModify n = Eq (n ++ ".modify") $ Alt [VarPattern "f"] $ Do [Bind (VarPattern "v") (Var (n ++ ".get")), Statement (App (Var (n ++ ".set")) (App (Var "f") (Var "v")))]
 
->   makeAccessor :: Pattern -> DataField -> (Int,[Equation]) -> (Int,[Equation])
->   makeAccessor p (DField n _ _) (i,eqs) = (i-1, get : set : upd : mod : eqs)
+>   makeAccessor :: Pattern -> StateDataField -> (Int,[Equation]) -> (Int,[Equation])
+>   makeAccessor p (SField n e _ _) (i,eqs) = (i-1, get : set : upd : mod : eqs)
 >       where
 >           get = mkGetter n
 >           set = mkSetter n p i
 >           upd = mkUpdate n p i
 >           mod = mkModify n
 
->   makeAccessors :: Pattern -> [DataField] -> [Equation]
+>   makeAccessors :: Pattern -> [StateDataField] -> [Equation]
 >   makeAccessors pat fs = snd $ foldr (makeAccessor pat) (length fs - 1,[]) fs
+
+>   mkSCtrPat :: String -> [StateDataField] -> Pattern
+>   mkSCtrPat n fs = CtrPattern n $ map fst $ zip [VarPattern ('x' : show n) | n <- [0..]] fs
+
+>   makeStateDefault :: String -> [StateDataField] -> Equation
+>   makeStateDefault n fs = Eq (map toLower n ++ ".default") $ Alt [] $ foldl App (Var n) (map sFieldVal fs)
+
+>   stToDField :: StateDataField -> DataField
+>   stToDField (SField n _ t p) = DField n t p
 
 >   makeState ::
 >       AlexPosn    ->
 >       TokenP      ->
 >       [TypeParam] ->
 >       Maybe SType ->
->       [DataField] ->
+>       [StateDataField] ->
 >       Parser (LocP Definition)
 >   makeState p tp ps mt fs = let 
 >           tn = tkVal tp 
 >           dn = tn ++ "Data"
->           as = makeAccessors (mkCtrPat' tn fs) fs in do
->       c  <- buildDataCtr p tn fs
+>           as = makeAccessors (mkSCtrPat tn fs) fs 
+>           ds = makeStateDefault tn fs in do
+>       c  <- buildDataCtr p tn (map stToDField fs)
 >       d  <- makeDataDef State dn ps [c]
 >       t  <- makeStateTy p mt tn dn ps
->       returnL p $ StateDef $ SDef tn ps mt fs t d as
+>       returnL p $ StateDef $ SDef tn ps mt fs t d (ds : as)
 
     {----------------------------------------------------------------------}
     {-- Expressions                                                       -}
@@ -499,9 +522,14 @@
 >       p <- exprToPattern ep
 >       return $ Getter p (tkVal tp)
 
->   makeSetter :: Expr -> TokenP -> Parser Statement
->   makeSetter e tp = do
+>   makeSetter' :: Expr -> TokenP -> Parser Statement
+>   makeSetter' e tp = do
 >       return $ Setter e (tkVal tp)
+
+>   makeSetter :: Expr -> Expr -> Parser Statement
+>   makeSetter e fe = do
+>       f <- exprToField fe
+>       return $ Setter e f
 
 >   checkStmts :: [Statement] -> Parser Expr
 >   checkStmts [] = error "list of statements can't be empty"

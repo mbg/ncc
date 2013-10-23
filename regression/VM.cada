@@ -1,0 +1,43 @@
+module VM
+{
+    class Default a
+    {
+        defaultValue :: a;
+    }
+
+    instance Default Int
+    {
+        defaultValue = 0;
+    }
+
+    state Registers a
+    {
+        r0 = defaultValue :: a;
+        r1 = defaultValue :: a;
+        r2 = defaultValue :: a;
+    }
+
+    state VM a
+    {
+        regs  = registers.default :: RegistersData a;
+        stack = []                :: [a];
+    }
+
+    data Instr
+    {
+        MOV
+    }
+
+    --read :: Int -> VM a a;
+    --read 0 = { this.regs.r0 };
+
+    eval :: Instr -> VM Int Int;
+    eval MOV = {
+        t <: regs.r0; -- assume getter in any other situation?
+        t >: regs.r1; -- change this to :=
+        return t;
+    };
+
+    main :: IO ();
+    main = print (evalState (eval MOV) vm.default);
+}

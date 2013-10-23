@@ -65,6 +65,7 @@ import Cada.AST
     '\\'         { ($$, T TRop "\\")        }
     '<:'         { ($$, T TRop "<:")        }
     '>:'         { ($$, T TRop ">:")        }
+    ':='         { ($$, T TRop ":=")        }
     VAR          { (_, T TVar _)            }
     CTR          { (_, T TCtr _)            }
     VSYM         { (_, T TVarSym _)         }
@@ -290,7 +291,21 @@ dataD :: { LocP Definition }
 {--------------------------------------------------------------------------}
 {-- State                                                                 -}
 {--------------------------------------------------------------------------}
- 
+
+opt_default :: { Expr }
+ : '=' expr0                             { $2                             }
+ |                                       { Var "undefined"                }
+
+sfield :: { StateDataField }
+       : VAR opt_default '::' type0      {% makeSField $1 $2 $4           }
+  
+sfields :: { [StateDataField] }
+ : sfields0                              { unA $1                         }
+  
+sfields0 :: { Accum StateDataField }
+ :                                       { id                             }
+ | sfields0 sfield ';'                   { contA $1 $2                    }
+
 stateP :: { Maybe SType }
  :                                       { Nothing                        }
  | ':' type2                             { Just $2                        }
@@ -298,7 +313,7 @@ stateP :: { Maybe SType }
 stateD :: { LocP Definition }
  : STATE CTR typePs stateP 
    '{' 
-     fields
+     sfields
    '}'                                   {% makeState $1 $2 $3 $4 $6      }
  
 {--------------------------------------------------------------------------}
@@ -336,7 +351,8 @@ stmt :: { Statement }
  : expr0 ';'                             { Statement $1                   }
  | expr2 '<-' expr0 ';'                  {% makeBind $1 $3                }
  | expr2 '<:' VAR ';'                    {% makeGetter $1 $3              }
- | expr0 '>:' VAR ';'                    {% makeSetter $1 $3              }
+ | expr0 '>:' VAR ';'                    {% makeSetter' $1 $3             }
+ | expr2 ':=' expr0 ';'                  {% makeSetter $3 $1              }
 
 expr0 :: { Expr }
  : expr1                                 { $1                             }
