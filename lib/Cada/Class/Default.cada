@@ -1,0 +1,32 @@
+module Cada.Class.Default
+{
+    import NCC.Internal;
+
+    import Cada.Bool;
+    import Cada.Maybe;
+
+    class Default a
+    {
+        defaultValue :: a;
+    }
+
+    instance Default Int
+    {
+        defaultValue = 0;
+    }
+
+    instance Default Bool
+    {
+        defaultValue = False;
+    }
+
+    instance Default [a]
+    {
+        defaultValue = [];
+    }
+
+    instance Default (Maybe a)
+    {
+        defaultValue = Nothing;
+    }
+}

@@ -40,6 +40,7 @@
 >   preludeModules :: [String]
 >   preludeModules = [
 >       "NCC.Internal",
+>       "Cada.Class.Default",
 >       "Cada.Class.Eq",
 >       "Cada.Class.Ord",
 >       "Cada.Class.Num",
