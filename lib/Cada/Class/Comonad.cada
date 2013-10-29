@@ -1,0 +1,8 @@
+module Cada.Class.Comonad
+{
+    class Comonad c
+    {
+        extract :: c a -> a;
+        extend  :: (c a -> b) -> c a -> c b;
+    }
+}

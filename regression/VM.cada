@@ -30,18 +30,43 @@ module VM
     data Instr
     {
         MOV
+        {
+            movTarget :: Int;
+            movSource :: Int;
+        }
+        MOVD
+        {
+            movTarget :: Int;
+            movValue  :: Int;
+        }
     }
 
-    --read :: Int -> VM a a;
-    --read 0 = { this.regs.r0 };
+    {-
+    read 0 = this.regs.r0;
+    read 1 = this.regs.r1;
+    read 2 = this.regs.r2;-}
+    read :: Int -> VM a a;
+    read 0 = { v <: regs.r0; return v; };
+    read 1 = { v <: regs.r1; return v; };
+    read 2 = { v <: regs.r2; return v; };
 
-    eval :: Instr -> VM Int Int;
-    eval MOV = {
-        t <: regs.r0; -- assume getter in any other situation?
-        t >: regs.r1; -- change this to :=
-        return t;
+    write :: Int -> a -> VM a ();
+    write 0 v = { regs.r0 := v; };
+    write 1 v = { regs.r1 := v; };
+    write 2 v = { regs.r2 := v; };
+
+    eval :: [Instr] -> VM Int ();
+    eval [] = return ();
+    eval (MOV tr sr : is) = {
+        sv <- read sr;
+        write tr sv;
+        eval is;
+    };
+    eval (MOVD tr v : is) = {
+        write tr v;
+        eval is;
     };
 
     main :: IO ();
-    main = print (evalState (eval MOV) vm.default);
+    main = print (r1 (regs (execState (eval [MOVD 2 100, MOV 1 2]) vm.default)));
 }
