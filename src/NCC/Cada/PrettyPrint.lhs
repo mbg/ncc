@@ -101,6 +101,8 @@
 >       ppType' 5 l . 
 >       ppSpace . 
 >       ppType' 10 r
+>   ppType' w (STyAnn t a) = ppType' 0 t . ppSpace . ppInParens (
+>       showString "@unify ")
 
 >   ppType :: SType -> ShowS
 >   ppType = ppType' 0
@@ -300,6 +302,29 @@
 >       ppSemicolon 
 
     {----------------------------------------------------------------------}
+    {-- Tags                                                              -}
+    {----------------------------------------------------------------------}
+
+>   ppTagRule :: String -> TaggedRule -> ShowS
+>   ppTagRule ctr (TagRule ps t) =
+>       ppIndent 2 .
+>       showString ctr .
+>       ppSpace .
+>       ppPatterns ps .
+>       ppTyping .
+>       ppType t .
+>       ppSemicolon
+
+>   ppTagged :: TaggedDefinition -> ShowS
+>   ppTagged (TagDef ctr ps rl ts) =
+>       showString "tagged " .
+>       showString ctr .
+>       ppSpace .
+>       ppDefs ppTypeParam ps .
+>       showString " | " .
+>       ppInContext 1 (ppDefsW (ppTagRule ctr) ppNewLine ts . ppNewLine)
+
+    {----------------------------------------------------------------------}
     {-- Expressions and Statements                                        -}
     {----------------------------------------------------------------------}
 
@@ -423,13 +448,14 @@
 >       showString "import " .
 >       showString m .
 >       ppSemicolon 
->   ppDef (TypeDef d)  = ppAlias d
->   ppDef (TyClDef d)  = ppTypeClass d 
->   ppDef (InstDef d)  = ppInstance d
->   ppDef (DataDef d)  = ppDataDef d 
->   ppDef (StateDef d) = ppStateDef d
->   ppDef (TypeDec t)  = ppDecType t
->   ppDef (ValueDef e) = ppEquation e
+>   ppDef (TypeDef d)   = ppAlias d
+>   ppDef (TyClDef d)   = ppTypeClass d 
+>   ppDef (InstDef d)   = ppInstance d
+>   ppDef (DataDef d)   = ppDataDef d 
+>   ppDef (StateDef d)  = ppStateDef d
+>   ppDef (TypeDec t)   = ppDecType t
+>   ppDef (ValueDef e)  = ppEquation e
+>   ppDef (TaggedDef t) = ppTagged t
     
 {--------------------------------------------------------------------------------------------------
                                             End of File                                            

@@ -6,7 +6,7 @@ NCC_OPTIONS = --path ../lib/ --keep-hs
 
 prelude: ../lib/NCC/Internal.hs
 	ghc -c -O2 ../lib/NCC/Internal.hs -o ../lib/NCC/Internal.o
-	$(NCC) --no-link --no-implicit-prelude $(LIB_SOURCES)
+	$(NCC) --no-link --no-implicit-prelude $(LIB_SOURCES) --trace --use-stdout > prelude-out.log
 
 tests: fib compiler car vm
 
@@ -22,3 +22,8 @@ car: ../regression/CarTest.cada
 vm: ../regression/VM.cada
 	$(NCC) ../regression/VM.cada -o vm --entry VM $(NCC_OPTIONS)
 
+unify: ../regression/VM.cada
+	$(NCC) ../regression/UnifyTest.cada -o unify --entry UnifyTest $(NCC_OPTIONS)
+
+tagged: ../regression/Tagged.cada
+	$(NCC) ../regression/Tagged.cada -o tagged --entry Tagged $(NCC_OPTIONS) --trace

@@ -209,6 +209,9 @@
 >       lt <- fromType env [] (STyCtr "[]")
 >       at <- fromType env [] t
 >       return $ TApp lt at
+>   fromType env ps (STyAnn t a) = do
+>       tt <- fromType env ps t
+>       return $ tt -- TODO
     
 >   fromContext :: [TypeConstraint] -> Context
 >   fromContext = S.fromList . map (\(TyConstr n v) -> In n $ TVar $ TyVar v KStar) 

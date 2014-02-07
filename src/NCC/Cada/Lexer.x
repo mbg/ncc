@@ -54,6 +54,8 @@ $chesc     = [abfnrtv\\\"\'\&]
            | "then" 
            | "type" 
            | "_"
+           | "@unify"
+           | "tagged"
 
 @rop       = ".."
            | ":"

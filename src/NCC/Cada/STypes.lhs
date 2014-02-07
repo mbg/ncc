@@ -11,7 +11,9 @@ are defined in this module are part of the AST and will later be converted to re
 >   TypeName,
 >   TypeConstraint(..),
 >   TypeParam(..),
+>   STypeAnn(..),
 >   SType(..),
+>   mkTyAnn,
 >   sTypeDomain,
 >   ctrsFromType,
 >   occursIn,
@@ -70,6 +72,11 @@ are defined in this module are part of the AST and will later be converted to re
 >   instance Eq TypeParam where
 >       (TyP x _) == (TyP y _) = x == y
 
+>   data STypeAnn = STA {
+>       tyPattern :: SType,
+>       tyError   :: String
+>   } deriving (Eq, Ord)
+
 >   data SType = STyVar {
 >       tyVarName :: String
 >   }          | STyCtr {
@@ -81,7 +88,14 @@ are defined in this module are part of the AST and will later be converted to re
 >       tyTuple   :: [SType]
 >   }          | STyList {
 >       tyList    :: SType
+>   }          | STyAnn {
+>       tyValue   :: SType,
+>       tyAnn     :: STypeAnn
 >   } deriving (Eq, Ord)
+
+>   mkTyAnn :: SType -> Maybe STypeAnn -> SType
+>   mkTyAnn t (Just a) = STyAnn t a
+>   mkTyAnn t Nothing  = t
 
 >   sTypeDomain :: SType -> SType
 >   sTypeDomain (STyApp l _) = sTypeDomain l
@@ -92,6 +106,7 @@ are defined in this module are part of the AST and will later be converted to re
 >   ctrsFromType (STyApp l r)  = ctrsFromType l . ctrsFromType r
 >   ctrsFromType (STyTuple ps) = mapA ctrsFromType ps
 >   ctrsFromType (STyList p)   = ctrsFromType p
+>   ctrsFromType (STyAnn t _)  = ctrsFromType t
 >   ctrsFromType _             = id
 
 >   instance FreeTyVars SType where
@@ -100,6 +115,7 @@ are defined in this module are part of the AST and will later be converted to re
 >       freeTyVars (STyApp l r)  = freeTyVars l `S.union` freeTyVars r
 >       freeTyVars (STyTuple ts) = freeTyVars ts
 >       freeTyVars (STyList t)   = freeTyVars t
+>       freeTyVars (STyAnn t _)  = freeTyVars t
 
 >   occursIn :: String -> SType -> Bool
 >   occursIn n (STyVar v)    = n == v
@@ -107,6 +123,7 @@ are defined in this module are part of the AST and will later be converted to re
 >   occursIn n (STyApp l r)  = occursIn n l || occursIn n r
 >   occursIn n (STyTuple ts) = any (occursIn n) ts
 >   occursIn n (STyList t)   = occursIn n t
+>   occursIn n (STyAnn t _)  = occursIn n t
 
 >   data TyQual t = [TypeConstraint] :==> t
 >   data TyScheme = Scheme [String] (TyQual SType)

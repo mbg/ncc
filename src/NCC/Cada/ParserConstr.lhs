@@ -22,6 +22,7 @@
 >   makeDataN,
 >   makeData,
 >   makeState,
+>   makeTagged,
 >   makeBind,
 >   makeSetter,
 >   makeSetter',
@@ -507,6 +508,20 @@
 >       d  <- makeDataDef State dn ps [c]
 >       t  <- makeStateTy p mt tn dn ps
 >       returnL p $ StateDef $ SDef tn ps mt fs t d (ds : as)
+
+    {----------------------------------------------------------------------}
+    {-- Tags                                                              -}
+    {----------------------------------------------------------------------}
+
+>   makeTagged ::
+>       AlexPosn ->
+>       TokenP   ->
+>       [TypeParam] ->
+>       [Relation] ->
+>       [TaggedRule] ->
+>       Parser (LocP Definition)
+>   makeTagged p tp ps rs ts = 
+>       returnL p $ TaggedDef $ TagDef (tkVal tp) ps rs ts
 
     {----------------------------------------------------------------------}
     {-- Expressions                                                       -}

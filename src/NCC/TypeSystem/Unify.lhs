@@ -59,18 +59,46 @@
 >       s1 <- mgu env f f'
 >       s2 <- mgu env (s1 ~> a) (s1 ~> a')
 >       return $ s2 <> s1
->   mgu env (TFun tf ps) t          = do
+>   mgu env tfun@(TFun tf ps) t          = trace ("TFun (" ++ ppMonoType 0 tfun "" ++ ") (" ++ ppMonoType 0 t "" ++ ")\n") $ do
 >       t' <- resolve env tf ps
->       mgu env t' t
->   mgu env t (TFun tf ps)          = do
+>       mgu env t' t `handleUnifyError` throwUnifyError' tfun t
+>   mgu env t tfun@(TFun tf ps)          = trace ("TFun (" ++ ppMonoType 0 t "" ++ ") (" ++ ppMonoType 0 tfun "" ++ ")\n") $ do
 >       t' <- resolve env tf ps
->       mgu env t t'
->   mgu env t t'                    = throwError $ UnifyError t t'
+>       mgu env t t' `handleUnifyError` throwUnifyError' t tfun
+>   mgu env t t'                    = throwUnifyError t t'
 
 >   resolve :: Monad m => Envs -> TyFun -> [MonoType] -> Unify m MonoType
 >   resolve env (TyFun n k) ps = case M.lookup n (alEnv env) of
 >       (Just al) -> return $ inst ps $ mkMono (aliasType al)
 >       Nothing   -> throwError $ OtherError "Internal precondition failed: "
+
+------------------------------------------------------------------------------------------
+-- bold new code
+------------------------------------------------------------------------------------------
+
+>   type UnifyHandler = (MonoType,MonoType,TypeError)
+
+>   errorHandlers :: [UnifyHandler]
+>   errorHandlers = [(TCtr (TyCtr "Int" KStar),TFun (TyFun "String" KStar) [],OtherError "An Int is not a String!\n")]
+
+>   findUnifyError :: MonoType -> MonoType -> [UnifyHandler] -> Maybe TypeError
+>   findUnifyError t0 t1 []                   = Nothing
+>   findUnifyError t0 t1 ((t0',t1',err) : xs)
+>       | t0 == t0' && t1 == t1' = Just err
+>       | otherwise              = findUnifyError t0 t1 xs
+
+>   throwUnifyError :: Monad m => MonoType -> MonoType -> Unify m a
+>   throwUnifyError t0 t1 = throwUnifyError' t0 t1 (UnifyError t0 t1)
+
+>   throwUnifyError' :: Monad m => MonoType -> MonoType -> TypeError -> Unify m a
+>   throwUnifyError' t0 t1 e = case findUnifyError t0 t1 errorHandlers of
+>       (Just err) -> throwError err
+>       Nothing    -> throwError e
+
+>   handleUnifyError :: Monad m => Unify m a -> (TypeError -> Unify m a) -> Unify m a
+>   handleUnifyError m1 m2 = m1 `catchError` m2
+
+------------------------------------------------------------------------------------------
 
 >   bind :: Monad m => TyVar -> MonoType -> Unify m Theta
 >   bind tv t

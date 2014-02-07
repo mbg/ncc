@@ -64,7 +64,7 @@
 >   unify :: Envs -> MonoType -> MonoType -> TI ()
 >   unify env t t' = do
 >       s <- get
->       u <- mgu env (s ~> t) (s ~> t') `inContext` (const $ UnifyError (s ~> t) (s ~> t'))
+>       u <- mgu env (s ~> t) (s ~> t') --`inContext` (const $ UnifyError (s ~> t) (s ~> t'))
 >       extTheta u
 
 >   unifyAbs :: Envs -> Expr -> MonoType -> Expr -> MonoType -> TI ()

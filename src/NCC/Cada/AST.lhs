@@ -11,6 +11,7 @@ types which are constructed by the parser from a Cada source file.
     {- Module re-exports -}
 
 >   module Cada.Location,
+>   module Cada.Pattern,
 >   module Cada.STypes,
 >   module Cada.Typed,
 
@@ -48,7 +49,12 @@ types which are constructed by the parser from a Cada source file.
 >   Alt(..),
 >   Equation(..),
 >   DecType(..),
->   Definition(..)
+>   Definition(..),
+
+>   Relation(..),
+>   TaggedRule(..),
+>   TaggedDefinition(..)
+
 > ) where
 
     {----------------------------------------------------------------------}
@@ -60,6 +66,7 @@ types which are constructed by the parser from a Cada source file.
 >   import Cada.Lexer
 >   import Cada.Name
 >   import Cada.Location
+>   import Cada.Pattern
 >   import Cada.STypes
 >   import Cada.Typed
 
@@ -221,6 +228,23 @@ types which are constructed by the parser from a Cada source file.
 >       defSigType    :: TyScheme
 >   }
 
+>   data Relation = Rel {
+>       relLHS :: [Loc String],
+>       relRHS :: [Loc String]
+>   }
+
+>   data TaggedRule = TagRule {
+>       tRulePatterns :: [Pattern],
+>       tRuleType     :: SType
+>   }
+
+>   data TaggedDefinition = TagDef {
+>       tDefCtr    :: String,
+>       tDefParams :: [TypeParam],
+>       tDefRels   :: [Relation],
+>       tDefRules  :: [TaggedRule]
+>   }
+
     {----------------------------------------------------------------------}
     {-- Expressions and Statements                                        -}
     {----------------------------------------------------------------------}
@@ -362,6 +386,8 @@ types which are constructed by the parser from a Cada source file.
 >       tdec       :: DecType
 >   }               | ValueDef {
 >       vdecEq     :: Equation
+>   }               | TaggedDef {
+>       tagDefVal  :: TaggedDefinition
 >   }
 
 {--------------------------------------------------------------------------------------------------

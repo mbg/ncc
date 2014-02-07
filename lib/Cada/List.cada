@@ -36,7 +36,9 @@ module Cada.List
     concat []       = [];
     concat (xs:xss) = xs ++ concat xss;
     
-    map :: (a -> b) -> [a] -> [b];
+    map :: (a -> b) 
+        -> [a] @unify x = "map must be applied to a list!"
+        -> [b];
     map _ []     = [];
     map f (x:xs) = f x : map f xs;
     

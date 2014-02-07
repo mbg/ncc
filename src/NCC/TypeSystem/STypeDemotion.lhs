@@ -53,6 +53,7 @@ Functions which demote surface types to expressions. (see A system of constructo
 >   demoteType (STyApp f a)  = App (demoteType f) (demoteType a)
 >   demoteType (STyList t)   = App (Var "t[]") (demoteType t)
 >   demoteType (STyTuple ts) = foldl App (tupleCtr ts) (map demoteType ts)
+>   demoteType (STyAnn t _)  = demoteType t
 
 >   demoteQType :: TyQual SType -> Expr
 >   --demoteQType ([]  :==> t) = demoteType t

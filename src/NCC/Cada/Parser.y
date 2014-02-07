@@ -56,6 +56,7 @@ import Cada.AST
     ','          { ($$, T TSpecial ",")     }
     '`'          { ($$, T TSpecial "`")     }
     '!'          { ($$, T TSpecial "!")     }
+    '|'          { ($$, T TRop "|")      }
     '='          { ($$, T TRop "=")         }
     ':'          { ($$, T TRop ":")         }
     '->'         { ($$, T TRop "->")        }
@@ -88,6 +89,8 @@ import Cada.AST
     THEN         { ($$, T TRes "then")      }
     TYPE         { ($$, T TRes "type")      }
     '_'          { ($$, T TRes "_")         }
+    ATUNIFY      { ($$, T TRes "@unify")    }
+    TAGGED       { ($$, T TRes "tagged")    }
 
 %left '->' THEN 
     
@@ -180,9 +183,16 @@ typePs0 :: { Accum TypeParam }
  :                                       { id                             }
  | typePs0 typeP                         { contA $1 $2                    }
 
+typeAnn :: { Maybe STypeAnn }
+ :                                       { Nothing                        }
+ | ATUNIFY type3 '=' STR                 { Just (STA $2 (tkVal $4))       }
+
 type0 :: { SType }
- : type2 '->' type0                      {  tyArrow $1 $3                 }
- | type2                                 {  $1                            }
+ : type1 '->' type0                      {  tyArrow $1 $3                 }
+ | type1                                 {  $1                            }
+
+type1 :: { SType }
+ : type2 typeAnn                         { mkTyAnn $1 $2                  }
 
 type2 :: { SType }
  : type2 type3                           { STyApp $1 $2                   }
@@ -317,6 +327,33 @@ stateD :: { LocP Definition }
    '}'                                   {% makeState $1 $2 $3 $4 $6      }
  
 {--------------------------------------------------------------------------}
+{-- Tagged                                                                -}
+{--------------------------------------------------------------------------}
+
+relation :: { Relation }
+ : VAR '->' VAR                          { Rel [tokenL $1] [tokenL $3] }
+
+relations0 :: { Accum Relation }
+ : relation                              { consA $1                      }
+ | relations0 ',' relation               { contA $1 $3                   }
+
+relations :: { [Relation] }
+ : relations0                            { unA $1                        }
+
+tagrule :: { TaggedRule }
+ : CTR patterns '::' type0               { TagRule $2 $4 }
+
+tagrules0 :: { Accum TaggedRule }
+ :                                       { id                            }
+ | tagrules0 tagrule ';'                 { contA $1 $2                   }
+
+tagrules :: { [TaggedRule] }
+ : tagrules0                             { unA $1                        }
+
+tagdef :: { LocP Definition }
+ : TAGGED CTR typePs '|' relations '{' tagrules '}' {% makeTagged $1 $2 $3 $5 $7 }
+
+{--------------------------------------------------------------------------}
 {-- Expressions                                                           -}
 {--------------------------------------------------------------------------}
       
@@ -419,7 +456,7 @@ def :: { LocP Definition }
     | stateD                             {  $1                            }
     | funDecl                            { makeTypeDec $1                 }
     | valDef                             {% makeValDef $1                 }
-    
+    | tagdef                             {  $1 }
 {
 {--------------------------------------------------------------------------}
 {-- Auxiliary Parser Functions                                            -}
