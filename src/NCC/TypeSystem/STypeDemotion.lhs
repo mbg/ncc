@@ -24,6 +24,7 @@ Functions which demote surface types to expressions. (see A system of constructo
 
 >   import Utility.Accum
     
+>   import Cada.Location
 >   import Cada.AST
 
 >   import TypeSystem.Kind
@@ -85,12 +86,13 @@ Functions which demote surface types to expressions. (see A system of constructo
 >   lambda :: [TypeParam] -> Expr -> Expr
 >   lambda ps = Abs . Alt (demoteParams ps)
     
->   isTyDef :: Definition Loc -> Bool
->   isTyDef (TypeDef {})  = True
->   isTyDef (TyClDef {})  = True
->   isTyDef (DataDef {})  = True
->   isTyDef (StateDef {}) = True
->   isTyDef _             = False
+>   isTyDef :: LocP Definition -> Bool
+>   isTyDef (Loc x p) = case x of
+>       (TypeDef {})  -> True
+>       (TyClDef {})  -> True
+>       (DataDef {})  -> True
+>       (StateDef {}) -> True
+>       _             -> False
     
 >   demoteDecType :: DecType -> Expr
 >   demoteDecType (DecTy _ t) = demoteTypeS t
@@ -123,19 +125,19 @@ Functions which demote surface types to expressions. (see A system of constructo
 >   demoteAlias (ADef n [] t) = eqn n $ demoteType t
 >   demoteAlias (ADef n ps t) = eqn n $ lambda ps (demoteType t)
     
->   demoteState :: StateDefinition -> Accum Equation
->   demoteState s = 
->       consA (demoteAlias (sDefType s)) . 
->       consA (demoteDataTy (sDefData s))
+>   demoteState :: StateDefinition -> Pos -> Accum (Loc Equation)
+>   demoteState s p = 
+>       consA (Loc (demoteAlias (sDefType s)) p) . 
+>       consA (Loc (demoteDataTy (sDefData s)) p)
     
->   demoteDef :: Definition Loc -> Accum Equation
->   demoteDef (TypeDef d)  = consA $ demoteAlias d
->   demoteDef (TyClDef d)  = consA $ demoteTyClass d
->   demoteDef (DataDef d)  = consA $ demoteDataTy d
->   demoteDef (StateDef d) = demoteState d
+>   demoteDef :: LocP Definition -> Accum (Loc Equation)
+>   demoteDef (Loc (TypeDef d) p)  = consA $ Loc (demoteAlias d) p
+>   demoteDef (Loc (TyClDef d) p)  = consA $ Loc (demoteTyClass d) p
+>   demoteDef (Loc (DataDef d) p)  = consA $ Loc (demoteDataTy d) p
+>   demoteDef (Loc (StateDef d) p) = demoteState d p
     
->   demoteDefs :: [LocP Definition] -> [Equation]
->   demoteDefs = unA . mapA demoteDef . filter isTyDef . map unL
+>   demoteDefs :: [LocP Definition] -> [Loc Equation]
+>   demoteDefs = unA . mapA demoteDef . filter isTyDef 
     
 >   demoteModule :: Module Loc -> BindGroup 
 >   demoteModule = toBG . findDeps . demoteDefs . moduleDefs
@@ -144,12 +146,12 @@ Functions which demote surface types to expressions. (see A system of constructo
     {-- Sorting                                                           -}
     {----------------------------------------------------------------------}
     
->   type KindNode = (Equation, String, [String])
+>   type KindNode = (Loc Equation, String, [String])
 
->   toKindNode :: Equation -> KindNode
->   toKindNode (Eq n alt) = (Eq n alt, n, S.toList $ freeVars alt)
+>   toKindNode :: Loc Equation -> KindNode
+>   toKindNode (Loc (Eq n alt) p) = (Loc (Eq n alt) p, n, S.toList $ freeVars alt)
 
->   findDeps :: [Equation] -> [SCC KindNode]
+>   findDeps :: [Loc Equation] -> [SCC KindNode]
 >   findDeps = stronglyConnCompR . map toKindNode
 
 >   toImpl :: SCC KindNode -> [Impl]

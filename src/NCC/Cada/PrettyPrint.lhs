@@ -11,6 +11,7 @@
 >   ppExpr,
 >   ppStatement,
 >   ppPattern,
+>   ppPatterns,
 >   ppAlt,
 >   ppEquation',
 >   ppEquation,
@@ -312,7 +313,7 @@
 >       ppSpace .
 >       ppPatterns ps .
 >       ppTyping .
->       ppType t .
+>       ppTypeS t .
 >       ppSemicolon
 
 >   ppTagged :: TaggedDefinition -> ShowS

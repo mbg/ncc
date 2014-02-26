@@ -21,6 +21,7 @@
 >   import System.IO
 >   import System.IO.Temp
 
+>   import Cada.Location
 >   import Cada.AST
 >   import Cada.Dependencies
 
@@ -92,7 +93,7 @@
 >   generateInst :: String -> Instance -> HsCodeGen ()
 >   generateInst n (Inst (ctx :=> mt) eqs) = do
 >       writeHs $ hsInstHeader n ctx mt
->       mapM_ (writeHs . hsEquation 1) eqs
+>       mapM_ (writeHs . hsEquation 1 . inAutoPos) eqs
     
 >   generateInsts :: (String, [Instance]) -> HsCodeGen ()
 >   generateInsts (n, iss) = do
@@ -109,7 +110,7 @@
     {-- Value Definitions                                                 -}
     {----------------------------------------------------------------------}
     
->   generateEq :: Equation -> HsCodeGen ()
+>   generateEq :: Loc Equation -> HsCodeGen ()
 >   generateEq = writeHs . hsEquation 0
     
 >   generateExpl :: Expl -> HsCodeGen ()

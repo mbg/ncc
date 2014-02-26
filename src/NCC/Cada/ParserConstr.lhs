@@ -22,6 +22,7 @@
 >   makeDataN,
 >   makeData,
 >   makeState,
+>   makeTagRule,
 >   makeTagged,
 >   makeBind,
 >   makeSetter,
@@ -512,6 +513,13 @@
     {----------------------------------------------------------------------}
     {-- Tags                                                              -}
     {----------------------------------------------------------------------}
+
+>   makeTagRule ::
+>       [Pattern] ->
+>       SType     ->
+>       Parser TaggedRule
+>   makeTagRule ps t =
+>       return $ TagRule ps $ quantify ([] :==> t)
 
 >   makeTagged ::
 >       AlexPosn ->

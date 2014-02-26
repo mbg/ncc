@@ -20,6 +20,7 @@
 >   import TypeSystem.Instance
 >   import TypeSystem.Environments
 >   import TypeSystem.Unify
+>   import TypeSystem.Tags
 
 >   import Utility.Accum
 >   import Utility.Map
@@ -51,6 +52,9 @@
 >   mergeUnlessOverlap env k x y m = do 
 >       z <- foldrM (checkForOverlap env k) x y 
 >       return $ M.insert k z m
+
+>   mergeTags :: Handler Tags
+>   mergeTags k x y m = return m
     
 >   mergeEnv :: Handler a -> (Envs -> Env a) -> Envs -> Envs -> Merge a
 >   mergeEnv h f a b = mapFoldrM (mergeCheck h) (f a) (f b)
@@ -68,7 +72,8 @@
 >           mergeEnv errorIfDefined clEnv a b  <*>
 >           mergeEnv errorIfDefined exEnv a b  <*>
 >           pure M.empty                       <*>
->           mergeEnv errorIfDefined stEnv a b
+>           mergeEnv errorIfDefined stEnv a b  <*>
+>           mergeEnv mergeTags tgEnv a b
 >       iss <- mergeEnv (mergeUnlessOverlap env) inEnv a b
 >       return $ env { inEnv = iss }
 

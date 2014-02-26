@@ -235,7 +235,7 @@ types which are constructed by the parser from a Cada source file.
 
 >   data TaggedRule = TagRule {
 >       tRulePatterns :: [Pattern],
->       tRuleType     :: SType
+>       tRuleType     :: TyScheme
 >   }
 
 >   data TaggedDefinition = TagDef {
@@ -326,6 +326,13 @@ types which are constructed by the parser from a Cada source file.
 >       caseOptns  :: [Option]
 >   }         | Do {
 >       doStmts    :: [Statement]
+>   }         
+
+    The type inference algorithm may refine types more than the Haskell type inference allows,
+    so we need to generate `unsafeCoerce' in the right places.
+
+>             | Cast {
+>       castExpr   :: Expr 
 >   }
 
 >   instance FreeVars Expr where

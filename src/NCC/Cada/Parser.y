@@ -295,6 +295,7 @@ dataD :: { LocP Definition }
       : ENUM CTR '{' ctrL '}'            {% makeEnum $1 $2 $4             }
       | DATA CTR typePs '{' fields '}'   {% makeDataS $1 $2 $3 $5         }
       | DATA CTR typePs '{' ctrs '}'     {% makeData $1 $2 $3 $5          }
+      | DATA CTR typePs                  {% makeData $1 $2 $3 []          }
       | NEWTYPE CTR typePs '=' CTR
             '{' dfield '}'               {% makeDataN $1 $2 $3 $5 $7      }
 
@@ -341,7 +342,7 @@ relations :: { [Relation] }
  : relations0                            { unA $1                        }
 
 tagrule :: { TaggedRule }
- : CTR patterns '::' type0               { TagRule $2 $4 }
+ : CTR patterns '::' type0               {% makeTagRule $2 $4 }
 
 tagrules0 :: { Accum TaggedRule }
  :                                       { id                            }

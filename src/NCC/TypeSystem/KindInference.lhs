@@ -19,6 +19,7 @@
 >   import qualified Data.Map as M
 >   import Data.Maybe (fromJust)
     
+>   import Cada.Location
 >   import Cada.AST
 >   import Cada.PrettyPrint
     
@@ -47,14 +48,14 @@
 >   inferInstance as inst = extractKind <$> inferTypes initialEnvs as' bg
 >       where
 >           e   = demoteInstance inst
->           bg  = BG [] [[Impl "r" [Eq "r" (Alt [] e)]]] []
+>           bg  = BG [] [[Impl "r" [inAutoPos $ Eq "r" (Alt [] e)]]] []
 >           as' = kindAssumps <> as
 
 >   inferPolyKind :: Assumps -> TyScheme -> Either TypeError Kind
 >   inferPolyKind as sc = extractKind <$> inferTypes initialEnvs as' bg
 >       where
 >           e   = demoteTypeS sc
->           bg  = BG [] [[Impl "r" [Eq "r" (Alt [] e)]]] []
+>           bg  = BG [] [[Impl "r" [inAutoPos $ Eq "r" (Alt [] e)]]] []
 >           as' = kindAssumps <> as
     
     {----------------------------------------------------------------------}

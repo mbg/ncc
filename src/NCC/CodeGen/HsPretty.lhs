@@ -23,6 +23,7 @@
 >   import qualified Data.Map as M
 >   import qualified Data.Set as S
 
+>   import Cada.Location
 >   import Cada.AST
 >   import Cada.PrettyPrint
 
@@ -335,8 +336,8 @@
 >       showString " = " .
 >       hsExpr' 0 i e
  
->   hsEquation :: Int -> Equation -> ShowS
->   hsEquation i (Eq n alt) =
+>   hsEquation :: Int -> Loc Equation -> ShowS
+>   hsEquation i (Loc (Eq n alt) p) =
 >       ppIndent i .
 >       hsName n .
 >       ppSpace .

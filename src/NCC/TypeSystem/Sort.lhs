@@ -49,7 +49,7 @@
     
 >   data ValGroup = ValGroup {
 >       valType :: Maybe PolyType,
->       valEqs  :: [Equation]
+>       valEqs  :: [Loc Equation]
 >   }       
 
 >   type ValGroups  = M.Map String ValGroup
@@ -112,21 +112,21 @@
 >           vgs <- addType t n M.empty
 >           return $ M.insert i vgs gs
 
->   addEquation :: Equation -> ValGroups -> Compiler ValGroups
->   addEquation eq gs = case M.lookup (eqName eq) gs of
->       Nothing   -> return $ M.insert (eqName eq) (ValGroup Nothing [eq]) gs
->       (Just vn) -> return $ M.insert (eqName eq) (ValGroup (valType vn) (eq : valEqs vn)) gs
+>   addEquation :: Loc Equation -> ValGroups -> Compiler ValGroups
+>   addEquation leq@(Loc eq p) gs = case M.lookup (eqName eq) gs of
+>       Nothing   -> return $ M.insert (eqName eq) (ValGroup Nothing [leq]) gs
+>       (Just vn) -> return $ M.insert (eqName eq) (ValGroup (valType vn) (leq : valEqs vn)) gs
 
->   addValEq :: Equation -> Group ()
+>   addValEq :: Loc Equation -> Group ()
 >   addValEq eq = withValGroups $ addEquation eq 
 
 >   addInstEq :: Constr -> Equation -> Group ()
 >   addInstEq i eq = withInstGroups $ \gs -> case M.lookup i gs of
 >       (Just vgs) -> do
->           vgs' <- addEquation eq vgs
+>           vgs' <- addEquation (inAutoPos eq) vgs
 >           return $ M.insert i vgs' gs
 >       Nothing    -> do
->           vgs <- addEquation eq M.empty
+>           vgs <- addEquation (inAutoPos eq) M.empty
 >           return $ M.insert i vgs gs
 
 >   getInstEqs :: Constr -> Group ValGroups
@@ -187,24 +187,25 @@
 >       mapFoldrM_ (specMethodTy ctx cs) vgs
 
 >   addData :: DataDefinition -> Group ()
->   addData = mapM_ addValEq . dDefProjs
+>   addData = mapM_ (addValEq . inAutoPos) . dDefProjs
 
 >   addState :: StateDefinition -> Group ()
 >   addState (SDef _ _ _ _ _ adt eqs) = do
 >       addData adt
->       mapM_ addValEq eqs
+>       mapM_ (addValEq . inAutoPos) eqs
 
->   valDef :: Definition Loc -> Group ()
->   --valDef (TyClDef d)  = addTypeClass d
->   --valDef (InstDef d)  = addInstEqs d
->   valDef (DataDef d)  = addData d
->   valDef (StateDef d) = addState d
->   valDef (TypeDec d)  = addTypeDecs d
->   valDef (ValueDef d) = addValEq d
->   valDef _            = return ()
+>   valDef :: LocP Definition -> Group ()
+>   valDef (Loc x p) = case x of
+>       --(TyClDef d)  -> addTypeClass d
+>       --(InstDef d)  -> addInstEqs d
+>       (DataDef d)  -> addData d
+>       (StateDef d) -> addState d
+>       (TypeDec d)  -> addTypeDecs d
+>       (ValueDef d) -> addValEq (Loc d p)
+>       _            -> return ()
     
 >   groupDefs :: Module Loc -> Group () 
->   groupDefs = mapM_ valDef . map unL . moduleDefs
+>   groupDefs = mapM_ valDef . moduleDefs
 
 >   groupInstDecls :: Group ()
 >   groupInstDecls = do
@@ -241,10 +242,10 @@
 >   toInsts ((In n mt), vgs) = Insts n (S.empty :=> mt) $ 
 >       map (\(n,vg) -> toExpl (n ++ instName mt) vg) (M.toList vgs)
     
->   type ValueNode = ([Equation], String, [String])
+>   type ValueNode = ([Loc Equation], String, [String])
 
 >   toValueNode :: String -> ValGroup -> ValueNode
->   toValueNode n vn = (valEqs vn, n, S.toList $ freeVars $ valEqs vn)
+>   toValueNode n vn = (valEqs vn, n, S.toList $ freeVars $ map unL $ valEqs vn)
 
 >   findDeps :: ValGroups -> [SCC ValueNode]
 >   findDeps = stronglyConnCompR . M.elems . M.mapWithKey toValueNode

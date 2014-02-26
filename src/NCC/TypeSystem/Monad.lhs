@@ -73,6 +73,12 @@
 >       unify env t t' `inContext` \err -> 
 >           UnifyAbs fe ae (s ~> t) (s ~> t') err
 
+>   canUnify :: Envs -> MonoType -> MonoType -> TI ()
+>   canUnify env t t' = do
+>       s <- get
+>       mgu env (s ~> t) (s ~> t')
+>       return ()
+
 >   newTyVar :: Kind -> TI MonoType
 >   newTyVar k = do 
 >       i <- freshTI

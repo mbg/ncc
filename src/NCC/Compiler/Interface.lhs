@@ -35,6 +35,7 @@
 >   import TypeSystem.TypeClass
 >   import TypeSystem.Instance
 >   import TypeSystem.StateType
+>   import TypeSystem.Tags
 >   import TypeSystem.Environments
 >   import TypeSystem.EnvMerge
     
@@ -115,6 +116,17 @@
 >       B.put (M.size sts)
 >       mapM_ (uncurry serialiseSt) (M.toList sts)
     
+>   serialiseTag :: String -> Tags -> Put
+>   serialiseTag n tgs = do
+>       B.put n
+>       B.put (length tgs)
+>       mapM_ B.put tgs
+
+>   serialiseTags :: TgEnv -> Put
+>   serialiseTags tgs = do
+>       B.put (M.size tgs)
+>       mapM_ (uncurry serialiseTag) (M.toList tgs)
+
 >   serialiseEnvs :: ModuleName -> Envs -> Handle -> IO ()
 >   serialiseEnvs n e h = BL.hPut h $ runPut $ do
 >       B.put n
@@ -124,6 +136,7 @@
 >       serialiseExpls (exEnv e)
 >       serialiseInsts (inEnv e)
 >       serialiseSts (stEnv e)    
+>       serialiseTags (tgEnv e)
 
 >   saveInterface :: String -> ModuleName -> Envs -> Compiler ()
 >   saveInterface f n e = liftIO $ withFile f WriteMode (serialiseEnvs n e)
@@ -199,6 +212,18 @@
 >       c <- B.get
 >       M.fromList <$> replicateM c deserialiseSt
     
+>   deserialiseTag :: Get (String, Tags)
+>   deserialiseTag = do
+>       n  <- B.get
+>       c  <- B.get
+>       ts <- replicateM c B.get
+>       return (n,ts)
+
+>   deserialiseTags :: Get TgEnv
+>   deserialiseTags = do
+>       c <- B.get
+>       M.fromList <$> replicateM c deserialiseTag
+
 >   loadHeader :: Get Envs
 >   loadHeader = do
 >       n <- (B.get :: Get String)
@@ -208,7 +233,8 @@
 >           deserialiseClasses <*> 
 >           deserialiseExpls   <*>
 >           deserialiseInsts   <*>
->           deserialiseSts
+>           deserialiseSts     <*>
+>           deserialiseTags
     
 >   deserialiseEnvs :: Handle -> IO Envs
 >   deserialiseEnvs h = runGet loadHeader <$> BL.hGetContents h

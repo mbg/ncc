@@ -25,7 +25,7 @@
 >   import qualified Data.Map as M
 >   import qualified Data.Set as S
     
->   import Cada.AST
+>   import Cada.AST hiding (Typed(..))
 >   import Cada.PrettyPrint 
     
 >   import TypeSystem.Types
@@ -41,6 +41,8 @@
 >   import TypeSystem.TypeError
 >   import TypeSystem.Environments
 >   import TypeSystem.Reduction
+>   import TypeSystem.Tags
+>   import TypeSystem.Typed
 
 >   import Internal.NCC
 
@@ -52,21 +54,54 @@
 
 >   type Infer e t = Envs -> Assumps -> e -> TI (Context, t)
 
+>   data InferResult a = IR {
+>       resultContext :: Context,
+>       resultAssumps :: Assumps,
+>       resultValue   :: a
+>   }
+
+>   type InferR e t = Envs -> Assumps -> e -> TI (InferResult (Typed e t))
+
+>   returnVal :: e -> t -> TI (InferResult (Typed e t))
+>   returnVal r t = return $ IR S.empty M.empty $ Ty r t
+
+>   returnWithCtx :: Context -> e -> t -> TI (InferResult (Typed e t))
+>   returnWithCtx ctx r t = return $ IR ctx M.empty $ Ty r t
+
+>   returnWithAssumps :: Assumps -> e -> t -> TI (InferResult (Typed e t))
+>   returnWithAssumps as r t = return $ IR S.empty as $ Ty r t
+
+>   returnInfer :: Context -> Assumps -> e -> t -> TI (InferResult (Typed e t))
+>   returnInfer ctx as r t = return $ IR ctx as $ Ty r t
+
     {----------------------------------------------------------------------}
     {-- Literals                                                          -}
     {----------------------------------------------------------------------}
 
->   tiLiteral :: Envs -> Assumps -> Literal -> TI (Context, MonoType)
->   tiLiteral env as UnitLit     = return (S.empty, unitType)
->   tiLiteral env as (StrLit _)  = return (S.empty, stringType)
->   tiLiteral env as (IntLit _)  = return (S.empty, intType)
->   tiLiteral env as (PairLit es) = do
->       tiExpr env as $ foldl App (Var "(,)") es
->   tiLiteral env as (ListLit es) = do
+    Type inference for simple literals is easy: we just return the appropriate
+    type constructor (defined in Internal.NCC).
+
+>   tiLiteral :: InferR Literal MonoType 
+>   tiLiteral env as r@UnitLit      = returnVal r unitType
+>   tiLiteral env as r@(StrLit _)   = returnVal r stringType
+>   tiLiteral env as r@(IntLit _)   = returnVal r intType
+
+    We only support pairs (2-tuples) at the moment. This function would
+    have to be modified to select an appropriate type constructor for
+    larger arities.
+
+>   tiLiteral env as r@(PairLit es) = do
+>       (ctx, t) <- tiExpr env as $ foldl App (Var "(,)") es
+>       returnWithCtx ctx r t
+
+    For lists, we infer the types of all elements and try to unify them
+    with the generic list constructor.
+
+>   tiLiteral env as r@(ListLit es) = do
 >       (ctx,ts)     <- tiExprs env as es
 >       (ctx' :=> t) <- newInst listPolyType
 >       mapM (unify env t) (map (TApp listType) ts)  
->       return (ctx `S.union` ctx', t) 
+>       returnWithCtx (ctx `S.union` ctx') r t 
     
     {----------------------------------------------------------------------}
     {-- Patterns                                                          -}
@@ -86,50 +121,93 @@
 >           ts  = [t | (_,_,t) <- rs]
 >       return (ctx, as', ts) 
     
->   tiPatLiteral :: Envs -> Assumps -> Literal -> TI (Context, Assumps, MonoType)
->   tiPatLiteral env as UnitLit     = return (S.empty, empty, unitType)
->   tiPatLiteral env as (StrLit _)  = return (S.empty, empty, stringType)
->   tiPatLiteral env as (IntLit _)  = do
+>   type LocalType    = MonoType
+>   type LocalAssumps = Assumps
+
+>   tiPatLiteral :: InferR Literal MonoType 
+>   tiPatLiteral env as r@UnitLit     = returnVal r unitType 
+>   tiPatLiteral env as r@(StrLit _)  = returnVal r stringType 
+>   tiPatLiteral env as r@(IntLit _)  = do
 >       v <- newTyVar KStar
->       return (S.singleton (In "Num" v), empty, v)
->   tiPatLiteral env as (PairLit es) = do
+>       returnWithCtx (S.singleton (In "Num" v)) r v
+>   tiPatLiteral env as r@(PairLit es) = do
 >       (ctx,as',ts) <- tiPatExprs as es
 >       t'           <- newTyVar KStar
 >       pt           <- find "(,)" as
 >       (ctx' :=> t) <- newInst pt 
 >       unify env t (foldr mkFun t' ts) 
 >       s <- getTheta
->       return (ctx `S.union` ctx', as', t') 
->   tiPatLiteral env as (ListLit es) = do
+>       returnInfer (ctx `S.union` ctx') as' r t' 
+>   tiPatLiteral env as r@(ListLit es) = do
 >       (ctx,as',ts) <- tiPatExprs as es
 >       (ctx' :=> t) <- newInst listPolyType
 >       s <- getTheta
 >       mapM (unify env t) (map mkListType ts)  
->       return (ctx `S.union` ctx', as', t) 
-    
->   tiPattern :: Envs -> Assumps -> Pattern -> TI (Context, Assumps, MonoType)
->   tiPattern _ _ Wildcard          = do
+>       returnInfer (ctx `S.union` ctx') as' r t 
+
+>   tiPattern :: InferR Pattern MonoType --Envs -> Assumps -> Pattern -> TI (Context, Assumps, MonoType, LocalType)
+>   tiPattern _ _ r@Wildcard          = do
 >       v <- newTyVar KStar
->       return (S.empty, empty, v)
->   tiPattern _ _ (VarPattern x)    = do 
->       v <- newTyVar KStar
->       return (S.empty, x ~= mkPoly v, v)
->   tiPattern env as (LitPattern l)   = tiPatLiteral env as l
->   tiPattern env as (CtrPattern f ps) = do
+>       returnVal r v
+>   tiPattern _ _ r@(VarPattern x)    = do 
+>       v  <- newTyVar KStar
+>       v' <- newTyVar KStar 
+>       returnWithAssumps (x ~= mkPoly v) r v
+>   tiPattern env as r@(LitPattern l)   = tiPatLiteral env as l >>= \(IR c as (Ty v t)) -> return $ IR c as (Ty r t)
+>   tiPattern env as r@(CtrPattern f ps) = do
 >       (ctx, as', ts) <- tiPatterns env as ps
 >       t'             <- newTyVar KStar
 >       pt             <- find f as
 >       (ctx' :=> t)   <- newInst pt 
->       unify env t (foldr mkFun t' ts) 
->       return (ctx `S.union` ctx', as', t')
+
+>       case getTags f env of
+>           Nothing   -> unify env t (foldr mkFun t' ts)
+>           (Just rs) -> case findRule rs ps of
+>               Nothing  -> unify env t (foldr mkFun t' ts)
+>               (Just r) -> do 
+>                   (ctx'' :=> t'') <- newInst (tagRuleType r)
+>                   unify env t'' (foldr mkFun t' (drop (length (tagRulePattern r)) ts))
+>       returnInfer (ctx `S.union` ctx') as' r t'
+
+>       --unify env t (foldr mkFun t' ts) 
+
+    We need to test if the constructor has any associated tags.
+
+>       {-t0             <- newTyVar KStar
+>       case getTags f env of
+>           Nothing   -> do
+>               mapM_ (\(x, y) -> unify env x y) (zip ts ls)
+>               unify env t' t0
+>           (Just rs) -> case findRule rs ps of
+
+                If there is no matching rule, we can't refine the type.
+
+>               Nothing  -> do
+>                   mapM_ (\(x, y) -> unify env x y) (zip ts ls)         
+>                   unify env t' t0      
+
+                Otherwise, we need to refine the types of the patterns.
+
+>               (Just r) -> do
+>                   (ctx'' :=> t'') <- newInst (tagRuleType r)
+>                   unify env t'' (foldr mkFun t0 (drop (length (tagRulePattern r)) ls))
+
+>       returnInfer (ctx `S.union` ctx') as' r (t', t0)-}
+
+   tiPatternExt :: Envs -> Assumps -> Pattern -> TI (Context, Assumps, MonoType)
+   tiPatternExt env as p = do
+       (ctx, as', t, lt) <- tiPattern env as p 
+       unify env t lt
+       return (ctx,as',t)
 
 >   tiPatterns :: Envs -> Assumps -> [Pattern] -> TI (Context, Assumps, [MonoType])
 >   tiPatterns env as ps = do
 >       rs <- mapM (tiPattern env as) ps
 >       let
->           ctx = S.unions [c | (c,_,_) <- rs]
->           as' = unions [a | (_,a,_) <- rs]
->           ts  = [t | (_,_,t) <- rs]
+>           ctx = S.unions $ map resultContext rs 
+>           as' = unions $ map resultAssumps rs 
+>           ts  = map (tyType . resultValue) rs 
+>           --ls  = map (snd . tyType . resultValue) rs
 >       return (ctx, as', ts) 
 
     {----------------------------------------------------------------------}
@@ -142,7 +220,7 @@
 
 >   tiOption' :: Envs -> Assumps -> MonoType -> MonoType -> Option -> TI Context
 >   tiOption' env as t rt (Option p e) = do
->       (ctx, as', t') <- tiPattern env as p 
+>       (IR ctx as' (Ty _ t')) <- tiPattern env as p -- TODO: do something with l
 >       unify env t t'
 >       (dtx, t'') <- tiExpr env (as' `M.union` as) e
 >       unify env rt t''
@@ -159,8 +237,15 @@
 >   tiExpr' env as (Ctr x) = do
 >       pt          <- find x as
 >       (ctx :=> t) <- newInst pt
+
+        A constructor may have associated tag rules. 
+
+>       case getTags x env of
+>           Nothing   -> return ()
+>           (Just rs) -> return ()
+
 >       return (ctx, t)        
->   tiExpr' env as (Lit l) = tiLiteral env as l
+>   tiExpr' env as (Lit l) = tiLiteral env as l >>= \r -> return (resultContext r, tyType $ resultValue r)
 >   tiExpr' env as (App f a) = do
 >       (ctx,  tf) <- tiExpr env as f
 >       (ctx', ta) <- tiExpr env as a
@@ -330,7 +415,7 @@
 >   tiStmts env as [Setter e n]  = tiSetter env as (splitOn "." n) e --tiExpr' env as (App (Var (n ++ ".set")) e)
 >   tiStmts env as (x:xs)        = do
 >       (ctx,et,p)   <- tiStmt env as x
->       (ptx,as',pt) <- tiPattern env as p
+>       (IR ptx as' (Ty _ pt)) <- tiPattern env as p -- TODO: do something with lt
 >       (stx,st)     <- tiStmts env (as' <> as) xs
 >       t            <- newTyVar KStar
 >       unify env ((pt `mkFun` st) `mkFun` t) et
@@ -342,7 +427,7 @@
    
 >   tiAlt :: Infer Alt MonoType
 >   tiAlt env as (Alt ps e) = do
->       (ctx, as', ts) <- tiPatterns env as ps
+>       (ctx, as', ts) <- tiPatterns env as ps -- TODO: do something with ls
 >       (ctx', t)      <- tiExpr env (as' <> as) e 
 >       return (ctx `S.union` ctx', foldr mkFun t ts)
    
@@ -384,12 +469,12 @@
     
 >   tiExpl :: Envs -> Assumps -> Expl -> TI Context
 >   tiExpl env as ex = tiExpl' env as ex `inContext` 
->       EqsError (eqName $ head $ explEqs ex)
+>       EqsError (eqName $ unL $ head $ explEqs ex)
     
 >   tiExpl' :: Envs -> Assumps -> Expl -> TI Context
 >   tiExpl' env as (Expl n pt eqs) = do
 >       (ctx :=> t) <- newInst pt
->       etx         <- tiEquations env as eqs t
+>       etx         <- tiEquations env as (map unL eqs) t
 >       s           <- getTheta
 >       let
 >           ctx' = s ~> ctx
@@ -425,12 +510,12 @@
 >   restricted :: [Impl] -> Bool
 >   restricted = any simple 
 >       where
->           simple (Impl n eqs) = any (null . altPats . eqAlt) eqs
+>           simple (Impl n eqs) = any (null . altPats . eqAlt . unL) eqs
    
 >   tiImpls :: Infer [Impl] Assumps
 >   tiImpls env as bs = do
 >       ts  <- mapM (\_ -> newTyVar KStar) bs
->       ctx <- tiImpls' env (mkAssumps (map implName bs) (map mkPoly ts) <> as) (map implEqs bs) ts
+>       ctx <- tiImpls' env (mkAssumps (map implName bs) (map mkPoly ts) <> as) (map (map unL . implEqs) bs) ts
 >       s   <- getTheta
 >       let
 >           ctx' = s ~> ctx
@@ -465,7 +550,7 @@
 >   tiLetBindingName _              = error "tiLetBindingName"
     
 >   tiLetAssumps :: Envs -> Assumps -> Alt -> TI (Context, Assumps, MonoType)
->   tiLetAssumps env as alt@(Alt [p] _) = tiPattern env as p
+>   tiLetAssumps env as alt@(Alt [p] _) = tiPattern env as p >>= \(IR ctx as' (Ty _ mt)) -> return (ctx, as', mt)
 >   tiLetAssumps env as (Alt (p:ps) _)  = do
 >       bn       <- tiLetBindingName p
 >       t        <- newTyVar KStar
@@ -491,7 +576,8 @@
 >       let
 >           ctx = S.unions [c | (c, _, _) <- rs]
 >           as' = M.unions [a | (_, a, _) <- rs]
->           ts  = [t | (_, _, t) <- rs] 
+>           ts  = [t | (_, _, t) <- rs]
+>           --ls  = [l | (_, _, _, l) <- rs] -- TODO: do something with ls 
 >       ctxs <- mapM (tiLet env (as' `M.union` as)) (zip alts ts)    
 >       return (ctx `S.union` S.unions ctxs, as' `M.union` as)
     

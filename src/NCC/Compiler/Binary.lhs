@@ -23,6 +23,8 @@
 >   import qualified Data.Map as M
 >   import qualified Data.Set as S
 
+>   import Cada.AST (Pattern(..), Literal(..))
+
 >   import TypeSystem.Kind
 >   import TypeSystem.Types
 >   import TypeSystem.PolyType
@@ -31,6 +33,7 @@
 >   import TypeSystem.TypeClass
 >   import TypeSystem.Instance
 >   import TypeSystem.StateType
+>   import TypeSystem.Tags
 >   import TypeSystem.Environments
 
     {----------------------------------------------------------------------}
@@ -51,6 +54,34 @@
 >   getList = do
 >       c <- get
 >       replicateM c get
+
+>   instance Binary Literal where
+>       put UnitLit    = putWord8 0
+>       put (IntLit v) = do
+>           putWord8 1
+>           put v
+>       put (StrLit v) = do
+>           putWord8 2
+>           put v
+>       put _ = do error "Unsupported literal type for serialisation"
+>
+>       get = do
+>           c <- getWord8
+>           case c of
+>               0 -> return UnitLit
+>               1 -> IntLit <$> get
+>               2 -> StrLit <$> get
+
+>   instance Binary Pattern where
+>       put (LitPattern l) = do
+>           putWord8 1
+>           put l
+>       put _ = do error "Unsupported pattern type for serialisation"
+>
+>       get = do
+>           c <- getWord8
+>           case c of
+>               1 -> LitPattern <$> get
     
 >   instance Binary Kind where
 >       put KStar      = putWord8 0
@@ -186,6 +217,18 @@
 >           case c of
 >               0 -> pure Simple
 >               1 -> pure Transformer
+
+>   instance Binary TagRule where
+>       put (TagRule ps t) = do
+>           put (length ps)
+>           mapM_ put ps
+>           put t
+>
+>       get = do
+>           c  <- get
+>           ps <- replicateM c get
+>           t  <- get
+>           return $ TagRule ps t
 
 >   instance Binary Envs where
 >       put = undefined

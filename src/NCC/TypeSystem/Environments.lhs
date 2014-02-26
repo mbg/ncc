@@ -11,6 +11,7 @@
 >   ExEnv,
 >   InEnv,
 >   StEnv,
+>   TgEnv,
 >   Envs(..),
 >   initialEnvs,
 >   addADT,
@@ -19,6 +20,8 @@
 >   addExpl,
 >   addAssumps,
 >   addSt,
+>   addTag,
+>   getTags,
 >   getExpl,
 >   getClsExpl,
 >   addInstance,
@@ -50,6 +53,7 @@
 >   import TypeSystem.Instance
 >   import TypeSystem.Assump
 >   import TypeSystem.StateType
+>   import TypeSystem.Tags
 
     {----------------------------------------------------------------------}
     {-- Environments                                                      -}
@@ -67,6 +71,7 @@
 >   type ExEnv  = Env PolyType
 >   type InEnv  = Env [Instance]
 >   type StEnv  = Env StateType
+>   type TgEnv  = Env Tags
 
 >   data Envs = Envs {
 >       adtEnv :: ADTEnv, -- algebraic data types
@@ -74,11 +79,20 @@
 >       clEnv  :: ClEnv,  -- type classes
 >       exEnv  :: ExEnv,  -- typings
 >       inEnv  :: InEnv,  -- class instances
->       stEnv  :: StEnv   -- state types
+>       stEnv  :: StEnv,  -- state types
+>       tgEnv  :: TgEnv   -- tags
 >   }
 
 >   initialEnvs :: Envs
->   initialEnvs = Envs M.empty M.empty M.empty M.empty M.empty M.empty
+>   initialEnvs = Envs { 
+>       adtEnv = M.empty,
+>       alEnv  = M.empty,
+>       clEnv  = M.empty,
+>       exEnv  = M.empty,
+>       inEnv  = M.empty,
+>       stEnv  = M.empty,
+>       tgEnv  = M.empty
+>   }
 
 >   addADT :: String -> ADT -> Envs -> Envs
 >   addADT n adt envs = envs { adtEnv = M.insert n adt (adtEnv envs) }
@@ -99,6 +113,15 @@
 
 >   addSt :: String -> StateType -> Envs -> Envs
 >   addSt n st envs = envs { stEnv = M.insert n st (stEnv envs) }
+
+>   addTag :: String -> TagRule -> Envs -> Envs
+>   addTag n r envs = case M.lookup n (tgEnv envs) of
+>       Nothing   -> envs { tgEnv = M.insert n [r] (tgEnv envs) }
+>       (Just ts) -> if checkTagOverlap ts r then error "overlapping tag"
+>                    else envs { tgEnv = M.insert n (r : ts) (tgEnv envs) }
+
+>   getTags :: String -> Envs -> Maybe Tags
+>   getTags n envs = M.lookup n (tgEnv envs)
 
 >   getExpl :: String -> Envs -> Maybe PolyType
 >   getExpl n envs = M.lookup n (exEnv envs)
@@ -123,7 +146,7 @@
 >   kinds = M.map kind
 
 >   toKindIndex :: Envs -> KindIndex
->   toKindIndex (Envs adt als cls exs ins sts) = 
+>   toKindIndex (Envs adt als cls exs ins sts tgs) = 
 >       kinds adt `M.union` kinds als `M.union` kinds cls
 
 >   toKindAssumps :: Envs -> Assumps
@@ -139,7 +162,7 @@
 >   mapUnions = M.foldl M.union M.empty
     
 >   toAssumps :: Envs -> Assumps
->   toAssumps (Envs adt als cls exs ins sts) = 
+>   toAssumps (Envs adt als cls exs ins sts tgs) = 
 >       mapUnions (M.map adtCtrs adt) `M.union` 
 >       mapUnions (M.map clAssumps cls) `M.union`
 >       exs
@@ -156,9 +179,12 @@
 
 >   ppInstances :: (String, [Instance]) -> ShowS
 >   ppInstances (n,iss) = ppDefsW (ppInstance n) ppNewLine iss
+
+>   ppTags :: (String, Tags) -> ShowS
+>   ppTags (n,tgs) = showString n . ppSpace . ppDefsW ppTagRule ppSemicolon tgs
     
 >   ppEnvs :: Envs -> ShowS
->   ppEnvs (Envs adt als cls exs ins sts) =
+>   ppEnvs (Envs adt als cls exs ins sts tgs) =
 >       showString "# Algebraic data types:\n" .
 >       ppDefsW (uncurry ppADT) ppNewLine (M.toList adt) .
 >       showString "\n# Type aliases:\n" .
@@ -168,7 +194,9 @@
 >       showString "\n\n# Explicit typings:\n" .
 >       ppDefsW ppExpl ppNewLine (M.toList exs) .
 >       showString "\n\n# Instances:\n" .
->       ppDefsW ppInstances ppNewLine (M.toList ins)
+>       ppDefsW ppInstances ppNewLine (M.toList ins) .
+>       showString "\n\n# Tags:\n" .
+>       ppDefsW ppTags ppNewLine (M.toList tgs)
     
 {--------------------------------------------------------------------------------------------------
                                             End of File                                            

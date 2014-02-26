@@ -7,6 +7,7 @@
 >   Pos(..),
 >   Positioned(..),
 >   Loc(..),
+>   inAutoPos,
 >   RecA(..),
 >   LocP(..),
 >   inL,
@@ -51,6 +52,9 @@
 >       locValue :: a,
 >       locPosn  :: Pos
 >   }
+
+>   inAutoPos :: a -> Loc a
+>   inAutoPos x = Loc x AutoGenPos
 
 >   instance Functor Loc where
 >       fmap f (Loc a p) = Loc (f a) p

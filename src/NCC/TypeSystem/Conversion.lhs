@@ -25,7 +25,8 @@
 >   import Utility.Errors
 
 >   import Cada.Pos
->   import Cada.AST
+>   import Cada.AST hiding (TaggedRule(..))
+>   import qualified Cada.AST as AST 
 >   import Cada.PrettyPrint (ppType) 
     
 >   import TypeSystem.Kind
@@ -46,6 +47,7 @@
 >   import TypeSystem.Environments
 >   import TypeSystem.EnvMerge
 >   import TypeSystem.StateType
+>   import TypeSystem.Tags
 
     {----------------------------------------------------------------------}
     {-- Conversion Monad                                                  -}
@@ -72,7 +74,7 @@
 >   ppNotInScope :: String -> ShowS
 >   ppNotInScope n =
 >       ppTab .
->       showString "Not in scope: " .
+>       showString "Not in scope (conversion): " .
 >       ppId (showString n)
 
 >   ppPartialTyFun :: String -> ShowS
@@ -395,6 +397,31 @@
 >           (Just _) -> Transformer)
     
     {----------------------------------------------------------------------}
+    {-- Tags                                                              -}
+    {----------------------------------------------------------------------}
+
+>   mkTagRule :: String -> AST.TaggedRule -> EnvsTrans ()
+>   mkTagRule n (AST.TagRule ps st) = do
+>       env <- get
+>       t   <- lift $ fromTyScheme env st
+>       as  <- lift (gets cdAssumps)
+>       case inferPolyKind as st of
+>            (Left err) -> error $ ppKindError err ""
+>            (Right k)  -> let
+>               mt  = mkMono t
+>               ctx = context t
+>               ks  = kindArgs k
+>               s   = mkGens (map (\(TyVar v k) -> v) $ S.toList $ tyVars mt)
+>               pt  = ForAll ks (s ~> ctx :=> s ~> mt) in modify $ addTag n (TagRule ps pt)
+
+>   mkTagged :: TaggedDefinition -> EnvsTrans ()
+>   mkTagged (TagDef ctr vs rels ruls) = do
+>       --k <- lift $ lookupKind ctr
+>       --let
+>       --    ks = kindArgs k
+>       mapM_ (mkTagRule ctr) ruls
+
+    {----------------------------------------------------------------------}
     {-- Environments                                                      -}
     {----------------------------------------------------------------------}
     
@@ -420,6 +447,7 @@
 >               Nothing    -> put $ 
 >                   addInstance (instClass d) is env
 >   mkDec (Loc (StateDef d) p) = do mkState d
+>   mkDec (Loc (TaggedDef d) p) = do mkTagged d
 >   mkDec _            = do return ()
 
 >   mkAliases :: Loc AliasDefinition -> EnvsTrans ()

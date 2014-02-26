@@ -20,6 +20,7 @@
     
 >   import Utility.PrettyPrint
     
+>   import Cada.Location
 >   import Cada.AST (Equation)
 >   import Cada.PrettyPrint (ppEquation)
 
@@ -33,13 +34,13 @@
 
 >   data Impl = Impl {
 >       implName :: String,
->       implEqs  :: [Equation]
+>       implEqs  :: [Loc Equation]
 >   }
 
 >   data Expl = Expl {
 >       explName :: String,
 >       explType :: PolyType,
->       explEqs  :: [Equation]
+>       explEqs  :: [Loc Equation]
 >   }
 
 >   data Insts = Insts {
@@ -73,11 +74,11 @@
 >       ppTyping .
 >       ppPolyType t .
 >       ppNewLine .
->       ppDefsW ppEquation ppNewLine es .
+>       ppDefsW ppEquation ppNewLine (map unL es) .
 >       ppNewLine . ppNewLine
 
 >   ppImpl :: Impl -> ShowS
->   ppImpl (Impl n es) = ppTab . ppDefsW ppEquation (ppNewLine . ppTab) es
+>   ppImpl (Impl n es) = ppTab . ppDefsW ppEquation (ppNewLine . ppTab) (map unL es)
 
 >   ppImpls :: [Impl] -> ShowS
 >   ppImpls is = 

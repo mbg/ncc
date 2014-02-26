@@ -69,6 +69,7 @@ representations as opposed to "surface" representations which are used in the AS
 >                 | TCtr TyCtr
 >                 | TFun TyFun [MonoType]
 >                 | TApp MonoType MonoType
+>                 -- special types which are only used during type inference
 >                 | TGen Int
 >                 deriving (Eq, Ord)
 

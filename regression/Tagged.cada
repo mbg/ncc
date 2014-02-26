@@ -1,11 +1,11 @@
 module Tagged
 {
-    data A { MkA {} }
+    data A { MkA }
     data B { MkB }
 
     data Foo a
     {
-        Bar
+        Bar 
         {
             bar_tag :: String;
             bar_val :: a;
@@ -14,15 +14,15 @@ module Tagged
 
     tagged Bar t a | t -> a
     {
-        Bar "A" :: A -> Foo;
-        Bar "B" :: B -> Foo;
+        Bar "A" :: A -> Foo a;
+        Bar "B" :: B -> Foo a;
     }
 
     castFooToA :: Foo a -> Maybe A;
     castFooToA (Bar "A" v) = Just v;
-    castFooToA (Bar _ _)   = Nothing;
+    castFooToA (Bar "B" v) = Nothing;
 
     castFooToB :: Foo a -> Maybe B;
     castFooToB (Bar "B" v) = Just v;
-    castFooToB (Bar _ v)   = Nothing;
+    castFooToB (Bar "A" v) = Nothing;
 }
